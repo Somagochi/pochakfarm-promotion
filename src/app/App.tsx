@@ -342,6 +342,66 @@ function ProcessingPanel({ onDone }: { onDone: () => void }) {
   );
 }
 
+function PixelGeneratingModal() {
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 px-6 backdrop-blur-[4px]">
+      <div className="w-full max-w-[320px]">
+        <WindowPanel>
+          <div className="flex flex-col items-center gap-4 px-8 py-6">
+            <p
+              className="text-center text-[11px] tracking-[1.1px] text-[#628d38]"
+              style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
+            >
+              STEP 03
+            </p>
+            <p
+              className="text-center text-[18px] leading-[1.4] tracking-[0.9px] text-[#32322d]"
+              style={{
+                fontFamily: "Elice DX Neolli",
+                fontWeight: 500,
+              }}
+            >
+              사진을 픽셀 캐릭터로
+              <br />
+              변환하고 있어요
+            </p>
+            <p
+              className="text-center text-[10px] leading-[1.6] tracking-[0.4px] text-[#6a6a61]"
+              style={{
+                fontFamily: "Elice DX Neolli",
+                fontWeight: 300,
+              }}
+            >
+              배경을 제거하고
+              <br />
+              달릴 준비를 하는 중이에요
+            </p>
+            <div
+              className="relative h-[50px] w-[56px]"
+              style={{
+                animation: "dogBreath 1.8s ease-in-out infinite",
+              }}
+            >
+              <FigmaDog />
+            </div>
+            <div className="w-[200px]">
+              <div className="h-[7px] overflow-hidden rounded-full bg-[#e9dfc8]">
+                <div
+                  className="h-full rounded-full bg-[#628d38]"
+                  style={{
+                    width: "45%",
+                    animation: "loadingSweep 1.15s ease-in-out infinite",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </WindowPanel>
+      </div>
+    </div>
+  );
+}
+
 // ── CardPackPanel — tap to open ───────────────────────────────
 function CardPackPanel({ onOpen }: { onOpen: () => void }) {
   return (
@@ -1149,11 +1209,248 @@ function LegacyCardVersion() {
   );
 }
 
+function ClassicV2Version() {
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [characterName, setCharacterName] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const isButtonActive =
+    !!uploadedImage && characterName.trim().length > 0;
+
+  const readFile = useCallback((file: File) => {
+    if (!ACCEPTED_TYPES.has(file.type)) return;
+    trackEvent("classic_v2_photo_upload_started", {
+      file_type: file.type,
+    });
+    const reader = new FileReader();
+    reader.onload = (e) =>
+      setUploadedImage(e.target?.result as string);
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handleConvert = useCallback(() => {
+    if (!isButtonActive) return;
+    trackEvent("classic_v2_convert_started");
+    setPhase("processing");
+  }, [isButtonActive]);
+
+  const handleProcessingDone = useCallback(
+    () => setPhase("pack"),
+    [],
+  );
+  const handleOpenPack = useCallback(() => setPhase("dim"), []);
+  const handleResult = useCallback(() => {
+    trackEvent("classic_v2_result_viewed");
+    setPhase("result");
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setPhase("idle");
+    setUploadedImage(null);
+    setCharacterName("");
+  }, []);
+
+  const stepIndex =
+    phase === "idle" ? 1 : phase === "processing" ? 2 : 3;
+
+  return (
+    <div className="min-h-[100dvh] w-full bg-[#628d38] flex justify-center relative overflow-hidden">
+      <style>{KEYFRAMES}</style>
+      <VersionNav active="classic-v2" />
+
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `url("${imgBgPattern}")`,
+          backgroundRepeat: "repeat",
+          backgroundSize: "361px",
+          opacity: 0.3,
+        }}
+      />
+
+      <main className="relative flex min-h-[100dvh] w-full max-w-[360px] flex-col justify-center px-[14px] pb-4 pt-[44px]">
+        <div className="mb-2 flex justify-center gap-2">
+          {[1, 2, 3].map((step) => (
+            <div
+              key={step}
+              className={`h-[8px] rounded-full transition-all ${
+                step === stepIndex
+                  ? "w-[38px] bg-[#f2ebdd]"
+                  : "w-[18px] bg-[#36501e]/45"
+              }`}
+            />
+          ))}
+        </div>
+
+        {phase === "idle" && (
+          <WindowPanel>
+            <div className="flex min-h-[590px] flex-col items-center justify-center px-8 py-4">
+              <p
+                className="mb-2 text-center text-[11px] tracking-[1.1px] text-[#628d38]"
+                style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
+              >
+                CLASSIC V2
+              </p>
+              <p
+                className="mb-2 text-center text-[18px] leading-[1.35] tracking-[0.9px] text-[#32322d]"
+                style={{
+                  fontFamily: "Elice DX Neolli",
+                  fontWeight: 500,
+                }}
+              >
+                동물 사진과 이름으로
+                <br />
+                카드팩을 열어보세요
+              </p>
+              <p
+                className="mb-4 text-center text-[10px] leading-[1.6] tracking-[0.4px] text-[#6a6a61]"
+                style={{
+                  fontFamily: "Elice DX Neolli",
+                  fontWeight: 300,
+                }}
+              >
+                스크롤 없이 한 화면에서
+                <br />
+                단계별로 진행돼요
+              </p>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/heic"
+                onChange={(e) => {
+                  if (e.target.files?.[0]) readFile(e.target.files[0]);
+                }}
+                className="hidden"
+              />
+
+              <button
+                type="button"
+                className="relative h-[180px] w-[240px] overflow-hidden rounded-[4px]"
+                style={{
+                  background: "#f2ebdd",
+                  border: isDragging
+                    ? "2px dashed #628d38"
+                    : "1.5px dashed #e9dfc8",
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  if (e.dataTransfer.files[0])
+                    readFile(e.dataTransfer.files[0]);
+                }}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {uploadedImage ? (
+                  <img
+                    src={uploadedImage}
+                    alt="업로드된 사진"
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                ) : (
+                  <span
+                    className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center text-[#8f7755]"
+                    style={{
+                      fontFamily: "Elice DX Neolli",
+                      fontWeight: 500,
+                    }}
+                  >
+                    <span className="text-[28px] leading-none">+</span>
+                    <span className="text-[10px] leading-[1.5] tracking-[0.4px]">
+                      사진을 드래그하거나
+                      <br />
+                      이미지 파일을 선택하세요
+                    </span>
+                  </span>
+                )}
+              </button>
+
+              <input
+                type="text"
+                value={characterName}
+                onChange={(e) =>
+                  setCharacterName(
+                    e.target.value.replace(NAME_FILTER, ""),
+                  )
+                }
+                placeholder="이름을 작성해주세요"
+                className="mt-4 h-[48px] w-[240px] rounded-[12px] bg-white px-4 text-[14px] tracking-[0.84px] text-[#32322d] placeholder:text-[#a4a499] focus:outline-none focus:ring-2 focus:ring-[#628d38]"
+                style={{
+                  fontFamily: "Elice DX Neolli",
+                  fontWeight: 300,
+                  border: "1px solid #e9dfc8",
+                }}
+              />
+
+              <div className="mt-4">
+                <PixelButton
+                  onClick={handleConvert}
+                  disabled={!isButtonActive}
+                >
+                  <span
+                    className="w-full text-center text-[16px] tracking-[1.6px] text-white"
+                    style={{
+                      fontFamily: "Elice DX Neolli",
+                      fontWeight: 500,
+                    }}
+                  >
+                    변환하기
+                  </span>
+                </PixelButton>
+              </div>
+            </div>
+          </WindowPanel>
+        )}
+
+        {phase === "processing" && (
+          <ProcessingPanel onDone={handleProcessingDone} />
+        )}
+
+        {["pack", "dim", "result"].includes(phase) && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={handleReset}
+              className="absolute right-4 top-4 z-40 rounded-[5px] bg-[#36501e]/85 px-3 py-1.5 text-[10px] text-white shadow-[0_2px_0_rgba(39,53,31,0.25)]"
+              style={{
+                fontFamily: "Elice DX Neolli",
+                fontWeight: 500,
+              }}
+            >
+              처음으로
+            </button>
+            <CardPackPanel onOpen={handleOpenPack} />
+          </div>
+        )}
+      </main>
+
+      {(phase === "dim" || phase === "result") &&
+        uploadedImage && (
+          <PackOpeningOverlay
+            uploadedImage={uploadedImage}
+            characterName={characterName}
+            onResult={handleResult}
+          />
+        )}
+    </div>
+  );
+}
+
 // ── VersionNav ────────────────────────────────────────────────
 function VersionNav({
   active,
 }: {
-  active: "pixel-runner" | "pixel-runner-stage" | "classic";
+  active:
+    | "pixel-runner"
+    | "pixel-runner-stage"
+    | "classic"
+    | "classic-v2";
 }) {
   const linkBase =
     "rounded-[4px] px-3 py-2 text-[10px] tracking-[0.6px] transition-colors";
@@ -1191,6 +1488,17 @@ function VersionNav({
         style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
       >
         CLASSIC
+      </a>
+      <a
+        href="/classic-v2"
+        className={`${linkBase} ${
+          active === "classic-v2"
+            ? "bg-[#f2ebdd] text-[#36501e]"
+            : "bg-[#36501e]/75 text-white"
+        }`}
+        style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
+      >
+        CLASSIC V2
       </a>
     </nav>
   );
@@ -1420,7 +1728,7 @@ function PixelRunnerVersion({ staged = false }: { staged?: boolean } = {}) {
     return "동물 사진을 올려주세요";
   })();
 
-  const isRaceStep = state === "generating" || state === "running";
+  const isRaceStep = state === "running";
   const showFormPanel = !staged || !isRaceStep;
   const showRacePanel = !staged || isRaceStep;
   const stageIndex = !uploadedImage ? 1 : isRaceStep ? 3 : 2;
@@ -1476,6 +1784,428 @@ function PixelRunnerVersion({ staged = false }: { staged?: boolean } = {}) {
           : `runBob ${runDuration} linear infinite`
       : "none";
 
+  const raceContent = (
+    <div
+      className={`relative flex flex-col overflow-hidden bg-[#8ec85d] ${
+        staged ? "h-[calc(100dvh-72px)] min-h-[560px]" : "min-h-[700px]"
+      }`}
+      style={{
+        boxShadow: staged
+          ? "none"
+          : "inset 0 0 0 1px rgba(255,255,255,0.28)",
+      }}
+    >
+      {staged && (
+        <button
+          type="button"
+          onClick={handleResetFlow}
+          className="absolute right-4 top-4 z-40 rounded-[5px] bg-[#36501e]/85 px-3 py-1.5 text-[10px] text-white shadow-[0_2px_0_rgba(39,53,31,0.25)]"
+          style={{
+            fontFamily: "Elice DX Neolli",
+            fontWeight: 500,
+          }}
+        >
+          처음으로
+        </button>
+      )}
+      <div
+        className={`relative z-20 flex flex-col items-center px-4 ${
+          staged ? "pb-3 pt-4" : "pb-5 pt-5"
+        }`}
+      >
+        <div
+          className={`mb-3 rounded-full bg-[#fff8d8] px-5 text-[17px] tracking-[0.6px] text-[#27351f] shadow-[0_3px_0_rgba(69,92,45,0.18)] ${
+            staged ? "py-1.5" : "py-2"
+          }`}
+          style={{
+            fontFamily: "Elice DX Neolli",
+            fontWeight: 700,
+          }}
+        >
+          포착하기
+        </div>
+        <div
+          className={`flex w-[244px] items-center gap-3 rounded-[8px] border border-white/70 bg-white/92 px-3 py-2 shadow-[0_4px_0_rgba(67,84,45,0.18)] ${
+            staged ? "min-h-[64px]" : "min-h-[74px]"
+          }`}
+        >
+          <div
+            className={`flex items-center justify-center rounded-[8px] bg-[#efe3bd] shadow-inner ${
+              staged ? "h-[50px] w-[50px]" : "h-[58px] w-[58px]"
+            }`}
+          >
+            {generatedImage ? (
+              <img
+                src={generatedImage}
+                alt=""
+                className="h-[48px] w-[48px] object-contain"
+                style={{ imageRendering: "pixelated" }}
+              />
+            ) : (
+              <span className="text-[22px]">?</span>
+            )}
+          </div>
+          <div>
+            <p
+              className="text-[12px] text-[#32322d]"
+              style={{
+                fontFamily: "Elice DX Neolli",
+                fontWeight: 700,
+              }}
+            >
+              {characterName.trim() || "픽셀 동물"}
+            </p>
+            <p
+              className="text-[11px] text-[#586148]"
+              style={{
+                fontFamily: "Galmuri11",
+                fontWeight: 700,
+              }}
+            >
+              남은 거리 {remainingMeters}m
+            </p>
+          </div>
+        </div>
+        <div
+          className={`rounded-full bg-[#2f352b]/85 px-5 text-[11px] text-white shadow-[0_2px_0_rgba(255,255,255,0.25)] ${
+            staged ? "mt-2 py-1" : "mt-4 py-1.5"
+          }`}
+          style={{
+            fontFamily: "Elice DX Neolli",
+            fontWeight: 500,
+          }}
+        >
+          {raceStatus === "won"
+            ? "포착 성공!"
+            : raceStatus === "lost"
+              ? "다시 도전해보세요"
+              : `${speedLabel} · 남은 거리 ${remainingMeters}m`}
+        </div>
+      </div>
+
+      <div
+        className={`absolute inset-x-0 ${
+          staged ? "top-[130px] h-[94px]" : "top-[156px] h-[112px]"
+        }`}
+        style={{
+          background:
+            "linear-gradient(#9fd8f3 0%, #d8f1ff 62%, #65ad55 63%, #4c8e44 100%)",
+        }}
+      >
+        <div className="absolute bottom-[18px] left-[-18px] h-[72px] w-[104px] rounded-t-full bg-[#3e7c37] shadow-[inset_0_10px_0_rgba(255,255,255,0.12)]" />
+        <div className="absolute bottom-[16px] right-[-12px] h-[78px] w-[112px] rounded-t-full bg-[#4d913e] shadow-[inset_0_10px_0_rgba(255,255,255,0.12)]" />
+        <div className="absolute bottom-[34px] left-[74px] h-[24px] w-[218px] rounded-full bg-white/55" />
+        <div className="absolute bottom-[50px] left-[28px] h-[18px] w-[84px] rounded-full bg-white/45" />
+      </div>
+
+      <div
+        className={`absolute inset-x-0 bg-[#6cad48] ${
+          staged ? "top-[224px] h-[214px]" : "top-[268px] h-[270px]"
+        }`}
+        style={{
+          backgroundImage:
+            "linear-gradient(90deg, rgba(255,255,255,0.12) 1px, transparent 1px), linear-gradient(#86c85c 0 42px, transparent 42px)",
+          backgroundSize: "24px 24px, 100% 72px",
+          animation:
+            raceStatus === "racing" &&
+            isPlayerDashing &&
+            roadOffset < maxRoadOffset
+              ? "grassSlide 0.7s linear infinite"
+              : "none",
+        }}
+      />
+
+      <div
+        className={`absolute inset-x-[18px] z-10 overflow-hidden rounded-[7px] border border-[#5c7b36]/30 shadow-[0_6px_0_rgba(48,76,34,0.18)] ${
+          staged ? "top-[230px] h-[190px]" : "top-[274px] h-[238px]"
+        }`}
+      >
+        <div
+          className="absolute left-0 top-0 h-full transition-transform duration-500 ease-out"
+          style={{
+            width: `${raceWorldWidth}px`,
+            transform: `translateX(-${roadOffset}px)`,
+          }}
+        >
+          <div
+            className={`absolute left-0 top-0 w-full border-y border-[#f5e7c8] bg-[#af7443] ${
+              staged ? "h-[82px]" : "h-[104px]"
+            }`}
+          >
+            <div
+              className="absolute inset-0 opacity-35"
+              style={{
+                backgroundImage:
+                  "linear-gradient(90deg, rgba(92,58,32,0.28) 1px, transparent 1px)",
+                backgroundSize: "42px 100%",
+              }}
+            />
+          </div>
+          <div
+            className={`absolute left-0 w-full border-y border-[#f5e7c8] bg-[#af7443] ${
+              staged ? "top-[96px] h-[84px]" : "top-[124px] h-[104px]"
+            }`}
+          >
+            <div
+              className="absolute inset-0 opacity-35"
+              style={{
+                backgroundImage:
+                  "linear-gradient(90deg, rgba(92,58,32,0.28) 1px, transparent 1px)",
+                backgroundSize: "42px 100%",
+              }}
+            />
+          </div>
+          <div
+            className={`absolute top-0 w-[6px] bg-white shadow-[0_0_0_1px_rgba(47,53,43,0.2)] ${
+              staged ? "h-[180px]" : "h-[228px]"
+            }`}
+            style={{ left: `${finishWorldX}px` }}
+          >
+            <div className="absolute -right-[9px] -top-[13px] grid grid-cols-2 overflow-hidden rounded-[1px] border border-[#2f352b]">
+              <span className="h-[8px] w-[8px] bg-[#2f352b]" />
+              <span className="h-[8px] w-[8px] bg-white" />
+              <span className="h-[8px] w-[8px] bg-white" />
+              <span className="h-[8px] w-[8px] bg-[#2f352b]" />
+            </div>
+            <div
+              className="absolute -right-[18px] bottom-[-20px] rounded bg-[#2f352b] px-1 py-[1px] text-[10px] text-white"
+              style={{
+                fontFamily: "Galmuri11",
+                fontWeight: 700,
+              }}
+            >
+              {RACE_GOAL_METERS}m
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        className={`absolute inset-x-[18px] z-20 overflow-visible ${
+          staged ? "top-[230px] h-[82px]" : "top-[274px] h-[104px]"
+        }`}
+      >
+        <div
+          className="absolute bottom-[16px] transition-[left] duration-500 ease-out"
+          style={{
+            left: `${npcLeft}px`,
+          }}
+        >
+          <div className="absolute -left-9 top-7 flex gap-1" aria-hidden="true">
+            <span className="h-2 w-2 rounded-full bg-white/75" />
+            <span className="mt-2 h-2 w-2 rounded-full bg-white/55" />
+          </div>
+          <img
+            src={imgNpcDog}
+            alt="상대 NPC"
+            className={`object-contain ${
+              staged ? "h-[56px] w-[64px]" : "h-[62px] w-[70px]"
+            }`}
+            style={{
+              animation:
+                raceStatus === "racing" ? "runBob 0.28s linear infinite" : "none",
+              imageRendering: "pixelated",
+              filter: "drop-shadow(0 6px 0 rgba(70,45,26,0.24))",
+            }}
+          />
+        </div>
+      </div>
+
+      <div
+        className={`absolute inset-x-[18px] z-20 overflow-visible ${
+          staged ? "top-[326px] h-[104px]" : "top-[398px] h-[114px]"
+        }`}
+      >
+        {generatedImage ? (
+          <div
+            className="absolute bottom-[10px] transition-[left] duration-300 ease-out"
+            style={{
+              left: `${playerLeft}px`,
+              transform: speedShake,
+            }}
+          >
+            {raceStatus === "racing" &&
+              isPlayerDashing &&
+              speedLevel >= 2 && (
+                <>
+                  <img
+                    src={generatedImage}
+                    alt=""
+                    aria-hidden="true"
+                    className={`absolute left-[-16px] top-0 object-contain opacity-25 ${
+                      staged ? "h-[86px] w-[96px]" : "h-[96px] w-[108px]"
+                    }`}
+                    style={{
+                      animation: "afterImageFade 0.32s linear infinite",
+                      imageRendering: "pixelated",
+                      filter: "sepia(1) saturate(1.3)",
+                    }}
+                  />
+                  {speedLevel >= 4 && (
+                    <img
+                      src={generatedImage}
+                      alt=""
+                      aria-hidden="true"
+                      className={`absolute left-[-30px] top-1 object-contain opacity-15 ${
+                        staged ? "h-[86px] w-[96px]" : "h-[96px] w-[108px]"
+                      }`}
+                      style={{
+                        animation: "afterImageFade 0.24s linear infinite 0.08s",
+                        imageRendering: "pixelated",
+                        filter: "sepia(1) saturate(1.5)",
+                      }}
+                    />
+                  )}
+                </>
+              )}
+            {raceStatus === "racing" &&
+              isPlayerDashing &&
+              speedLevel >= 3 && (
+                <span
+                  className="absolute bottom-[4px] left-[16px] h-[9px] w-[70px] origin-center rounded-full bg-[#fff6ce]/80"
+                  style={{
+                    animation: "groundPulse 0.28s ease-out infinite",
+                  }}
+                  aria-hidden="true"
+                />
+              )}
+            {raceStatus === "racing" && isPlayerDashing && (
+              <div className="absolute -left-6 top-10 flex gap-1" aria-hidden="true">
+                <span
+                  className="h-2 w-2 rounded-full bg-white/80"
+                  style={{
+                    animation: `dustPop ${dustDuration} linear infinite`,
+                    width: `${8 + speedLevel * 2}px`,
+                    height: `${8 + speedLevel * 2}px`,
+                  }}
+                />
+                <span
+                  className="mt-3 h-2 w-2 rounded-full bg-white/60"
+                  style={{
+                    animation: `dustPop ${dustDuration} linear infinite 0.12s`,
+                    width: `${7 + speedLevel * 2}px`,
+                    height: `${7 + speedLevel * 2}px`,
+                  }}
+                />
+                {speedLevel >= 2 && (
+                  <span
+                    className="mt-1 rounded-full bg-[#fff6ce]/80"
+                    style={{
+                      animation: `dustPop ${dustDuration} linear infinite 0.22s`,
+                      width: `${10 + speedLevel * 3}px`,
+                      height: `${5 + speedLevel}px`,
+                    }}
+                  />
+                )}
+              </div>
+            )}
+            <img
+              src={generatedImage}
+              alt="플레이어 픽셀 동물"
+              className={`object-contain ${
+                staged ? "h-[86px] w-[96px]" : "h-[96px] w-[108px]"
+              }`}
+              style={{
+                animation: playerRunAnimation,
+                imageRendering: "pixelated",
+                filter:
+                  speedLevel >= 3
+                    ? "drop-shadow(0 7px 0 rgba(70,45,26,0.25)) drop-shadow(-10px 0 10px rgba(255,246,206,0.35))"
+                    : "drop-shadow(0 7px 0 rgba(70,45,26,0.25))",
+              }}
+            />
+          </div>
+        ) : (
+          <div
+            className="absolute left-1/2 top-0 flex h-[104px] w-[132px] -translate-x-1/2 items-center justify-center rounded-[4px] bg-[#f2ebdd]/85 text-center text-[10px] leading-[1.5] text-[#8f7755]"
+            style={{
+              fontFamily: "Elice DX Neolli",
+              fontWeight: 300,
+              animation: state === "generating" ? "hop 0.8s ease-in-out infinite" : "none",
+            }}
+          >
+            {state === "generating" ? "생성 중" : "픽셀 캐릭터가 여기서 달려요"}
+          </div>
+        )}
+      </div>
+
+      <div
+        className={`z-30 flex flex-col items-center px-4 ${
+          staged
+            ? "absolute inset-x-0 bottom-0 gap-3 pb-4"
+            : "relative mt-[360px] gap-4 pb-7"
+        }`}
+      >
+        {generatedImage && (
+          <button
+            type="button"
+            onClick={canDash ? handleDash : handleRestartRace}
+            className={`relative flex items-center justify-center rounded-full bg-[#fff0aa] shadow-[0_0_0_5px_rgba(92,142,60,0.55),0_0_0_11px_rgba(255,240,170,0.5),0_9px_0_rgba(56,83,38,0.25)] transition-transform active:translate-y-[3px] active:shadow-[0_0_0_5px_rgba(92,142,60,0.55),0_0_0_11px_rgba(255,240,170,0.5),0_5px_0_rgba(56,83,38,0.25)] ${
+              staged ? "h-[86px] w-[86px]" : "h-[108px] w-[108px]"
+            }`}
+            style={{
+              cursor: "pointer",
+              animation:
+                speedLevel >= 2 && canDash
+                  ? "buttonPulse 0.55s ease-in-out infinite"
+                  : "none",
+            }}
+          >
+            <span className="absolute inset-[12px] rounded-full bg-[#5f9740] shadow-inner" />
+            <span
+              className="absolute inset-[7px] rounded-full border-[3px] border-white/60"
+              style={{
+                opacity: speedRatio,
+              }}
+            />
+            <span
+              className="relative z-10 flex flex-col items-center text-center text-white"
+              style={{
+                fontFamily: "Elice DX Neolli",
+                fontWeight: 700,
+              }}
+            >
+              <span className="text-[11px] leading-[1.25]">
+                {canDash ? speedLabel : "다시"}
+              </span>
+              <span className="text-[12px] leading-[1.25]">
+                {canDash ? "더 빨리!" : "달리기"}
+              </span>
+            </span>
+          </button>
+        )}
+
+        {!staged && (
+          <div className="flex min-h-[48px] w-[278px] items-center gap-2 rounded-[6px] border border-white/70 bg-[#fff6ce] px-3 py-2 shadow-[0_3px_0_rgba(67,84,45,0.15)]">
+            <span className="text-[18px]">💡</span>
+            <p
+              className="text-[10px] leading-[1.35] text-[#6b5b35]"
+              style={{
+                fontFamily: "Elice DX Neolli",
+                fontWeight: 500,
+              }}
+            >
+              버튼을 터치할수록 속도가 빨라져요!
+            </p>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={generatedImage ? handleSave : handleGenerate}
+          disabled={!uploadedImage || state === "generating"}
+          className="h-[38px] w-[278px] rounded-[5px] border border-[#e9dfc8] bg-white text-[11px] tracking-[0.4px] text-[#32322d] shadow-[0_2px_0_rgba(67,84,45,0.12)] disabled:opacity-50"
+          style={{
+            fontFamily: "Elice DX Neolli",
+            fontWeight: 500,
+          }}
+        >
+          {generatedImage ? "픽셀 PNG 저장하기" : "변환하기"}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen w-full bg-[#6d9851] flex justify-center relative overflow-hidden">
       <style>{`${KEYFRAMES}
@@ -1490,6 +2220,7 @@ function PixelRunnerVersion({ staged = false }: { staged?: boolean } = {}) {
         @keyframes dustPop { 0% { opacity: 0; scale: 0.5; translate: 12px 0; } 40% { opacity: 0.9; } 100% { opacity: 0; scale: 1.25; translate: -18px -6px; } }
         @keyframes grassSlide { from { background-position: 0 0; } to { background-position: -48px 0; } }
         @keyframes buttonPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+        @keyframes loadingSweep { 0% { transform: translateX(-120%); } 55% { transform: translateX(95%); } 100% { transform: translateX(220%); } }
       `}</style>
       <VersionNav active={staged ? "pixel-runner-stage" : "pixel-runner"} />
 
@@ -1503,14 +2234,14 @@ function PixelRunnerVersion({ staged = false }: { staged?: boolean } = {}) {
       />
 
       <main
-        className={`relative w-full max-w-[360px] pt-[58px] ${
+        className={`relative w-full max-w-[360px] ${
           staged
-            ? "flex min-h-screen flex-col justify-center pb-6"
-            : "pb-12"
+            ? "flex min-h-[100dvh] flex-col justify-center pb-4 pt-[44px]"
+            : "pb-12 pt-[58px]"
         }`}
       >
         {staged && (
-          <div className="mx-[14px] mb-3 flex justify-center gap-2">
+          <div className="mx-[14px] mb-2 flex justify-center gap-2">
             {[1, 2, 3].map((step) => (
               <div
                 key={step}
@@ -1527,7 +2258,11 @@ function PixelRunnerVersion({ staged = false }: { staged?: boolean } = {}) {
         {showFormPanel && (
         <div className="mx-[14px]">
           <WindowPanel>
-            <div className="flex flex-col items-center px-8 py-5">
+            <div
+              className={`flex flex-col items-center px-8 ${
+                staged ? "min-h-[590px] justify-center py-4" : "py-5"
+              }`}
+            >
               <p
                 className="mb-2 text-center text-[11px] tracking-[1.1px] text-[#628d38]"
                 style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
@@ -1567,7 +2302,9 @@ function PixelRunnerVersion({ staged = false }: { staged?: boolean } = {}) {
 
               <button
                 type="button"
-                className="relative h-[220px] w-[240px] overflow-hidden rounded-[4px] text-center"
+                className={`relative w-[240px] overflow-hidden rounded-[4px] text-center ${
+                  staged ? "h-[180px]" : "h-[220px]"
+                }`}
                 style={{
                   background: "#f2ebdd",
                   border: isDragging
@@ -1659,385 +2396,16 @@ function PixelRunnerVersion({ staged = false }: { staged?: boolean } = {}) {
         )}
 
         {showRacePanel && (
-        <div className={`mx-[14px] ${staged ? "" : "mt-4"}`}>
-          <WindowPanel>
-            <div
-              className={`relative flex flex-col overflow-hidden bg-[#8ec85d] ${
-                staged ? "min-h-[650px]" : "min-h-[700px]"
-              }`}
-              style={{
-                boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.28)",
-              }}
-            >
-              {staged && (
-                <button
-                  type="button"
-                  onClick={handleResetFlow}
-                  className="absolute right-4 top-4 z-40 rounded-[5px] bg-[#36501e]/85 px-3 py-1.5 text-[10px] text-white shadow-[0_2px_0_rgba(39,53,31,0.25)]"
-                  style={{
-                    fontFamily: "Elice DX Neolli",
-                    fontWeight: 500,
-                  }}
-                >
-                  처음으로
-                </button>
-              )}
-              <div className="relative z-20 flex flex-col items-center px-4 pb-5 pt-5">
-                <div
-                  className="mb-3 rounded-full bg-[#fff8d8] px-5 py-2 text-[17px] tracking-[0.6px] text-[#27351f] shadow-[0_3px_0_rgba(69,92,45,0.18)]"
-                  style={{
-                    fontFamily: "Elice DX Neolli",
-                    fontWeight: 700,
-                  }}
-                >
-                  포착하기
-                </div>
-                <div className="flex min-h-[74px] w-[244px] items-center gap-3 rounded-[8px] border border-white/70 bg-white/92 px-3 py-2 shadow-[0_4px_0_rgba(67,84,45,0.18)]">
-                  <div className="flex h-[58px] w-[58px] items-center justify-center rounded-[8px] bg-[#efe3bd] shadow-inner">
-                    {generatedImage ? (
-                      <img
-                        src={generatedImage}
-                        alt=""
-                        className="h-[48px] w-[48px] object-contain"
-                        style={{ imageRendering: "pixelated" }}
-                      />
-                    ) : (
-                      <span className="text-[22px]">?</span>
-                    )}
-                  </div>
-                  <div>
-                    <p
-                      className="text-[12px] text-[#32322d]"
-                      style={{
-                        fontFamily: "Elice DX Neolli",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {characterName.trim() || "픽셀 동물"}
-                    </p>
-                    <p
-                      className="text-[11px] text-[#586148]"
-                      style={{
-                        fontFamily: "Galmuri11",
-                        fontWeight: 700,
-                      }}
-                    >
-                      남은 거리 {remainingMeters}m
-                    </p>
-                  </div>
-                </div>
-                <div
-                  className="mt-4 rounded-full bg-[#2f352b]/85 px-5 py-1.5 text-[11px] text-white shadow-[0_2px_0_rgba(255,255,255,0.25)]"
-                  style={{
-                    fontFamily: "Elice DX Neolli",
-                    fontWeight: 500,
-                  }}
-                >
-                  {raceStatus === "won"
-                    ? "포착 성공!"
-                    : raceStatus === "lost"
-                      ? "다시 도전해보세요"
-                      : `${speedLabel} · 남은 거리 ${remainingMeters}m`}
-                </div>
-              </div>
-
-              <div
-                className="absolute inset-x-0 top-[156px] h-[112px]"
-                style={{
-                  background:
-                    "linear-gradient(#9fd8f3 0%, #d8f1ff 62%, #65ad55 63%, #4c8e44 100%)",
-                }}
-              >
-                <div className="absolute bottom-[18px] left-[-18px] h-[72px] w-[104px] rounded-t-full bg-[#3e7c37] shadow-[inset_0_10px_0_rgba(255,255,255,0.12)]" />
-                <div className="absolute bottom-[16px] right-[-12px] h-[78px] w-[112px] rounded-t-full bg-[#4d913e] shadow-[inset_0_10px_0_rgba(255,255,255,0.12)]" />
-                <div className="absolute bottom-[34px] left-[74px] h-[24px] w-[218px] rounded-full bg-white/55" />
-                <div className="absolute bottom-[50px] left-[28px] h-[18px] w-[84px] rounded-full bg-white/45" />
-              </div>
-
-              <div
-                className="absolute inset-x-0 top-[268px] h-[270px] bg-[#6cad48]"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(90deg, rgba(255,255,255,0.12) 1px, transparent 1px), linear-gradient(#86c85c 0 42px, transparent 42px)",
-                  backgroundSize: "24px 24px, 100% 72px",
-                  animation:
-                    raceStatus === "racing" &&
-                    isPlayerDashing &&
-                    roadOffset < maxRoadOffset
-                      ? "grassSlide 0.7s linear infinite"
-                      : "none",
-                }}
-              />
-
-              <div className="absolute inset-x-[18px] top-[274px] z-10 h-[238px] overflow-hidden rounded-[7px] border border-[#5c7b36]/30 shadow-[0_6px_0_rgba(48,76,34,0.18)]">
-                <div
-                  className="absolute left-0 top-0 h-full transition-transform duration-500 ease-out"
-                  style={{
-                    width: `${raceWorldWidth}px`,
-                    transform: `translateX(-${roadOffset}px)`,
-                  }}
-                >
-                  <div className="absolute left-0 top-0 h-[104px] w-full border-y border-[#f5e7c8] bg-[#af7443]">
-                    <div
-                      className="absolute inset-0 opacity-35"
-                      style={{
-                        backgroundImage:
-                          "linear-gradient(90deg, rgba(92,58,32,0.28) 1px, transparent 1px)",
-                        backgroundSize: "42px 100%",
-                      }}
-                    />
-                  </div>
-                  <div className="absolute left-0 top-[124px] h-[104px] w-full border-y border-[#f5e7c8] bg-[#af7443]">
-                    <div
-                      className="absolute inset-0 opacity-35"
-                      style={{
-                        backgroundImage:
-                          "linear-gradient(90deg, rgba(92,58,32,0.28) 1px, transparent 1px)",
-                        backgroundSize: "42px 100%",
-                      }}
-                    />
-                  </div>
-                  <div
-                    className="absolute top-0 h-[228px] w-[6px] bg-white shadow-[0_0_0_1px_rgba(47,53,43,0.2)]"
-                    style={{ left: `${finishWorldX}px` }}
-                  >
-                    <div className="absolute -right-[9px] -top-[13px] grid grid-cols-2 overflow-hidden rounded-[1px] border border-[#2f352b]">
-                      <span className="h-[8px] w-[8px] bg-[#2f352b]" />
-                      <span className="h-[8px] w-[8px] bg-white" />
-                      <span className="h-[8px] w-[8px] bg-white" />
-                      <span className="h-[8px] w-[8px] bg-[#2f352b]" />
-                    </div>
-                    <div
-                      className="absolute -right-[18px] bottom-[-20px] rounded bg-[#2f352b] px-1 py-[1px] text-[10px] text-white"
-                      style={{
-                        fontFamily: "Galmuri11",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {RACE_GOAL_METERS}m
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="absolute inset-x-[18px] top-[274px] z-20 h-[104px] overflow-visible">
-                <div
-                  className="absolute bottom-[16px] transition-[left] duration-500 ease-out"
-                  style={{
-                    left: `${npcLeft}px`,
-                  }}
-                >
-                  <div
-                    className="absolute -left-9 top-7 flex gap-1"
-                    aria-hidden="true"
-                  >
-                    <span className="h-2 w-2 rounded-full bg-white/75" />
-                    <span className="mt-2 h-2 w-2 rounded-full bg-white/55" />
-                  </div>
-                  <img
-                    src={imgNpcDog}
-                    alt="상대 NPC"
-                    className="h-[62px] w-[70px] object-contain"
-                    style={{
-                      animation:
-                        raceStatus === "racing"
-                          ? "runBob 0.28s linear infinite"
-                          : "none",
-                      imageRendering: "pixelated",
-                      filter: "drop-shadow(0 6px 0 rgba(70,45,26,0.24))",
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="absolute inset-x-[18px] top-[398px] z-20 h-[114px] overflow-visible">
-                {generatedImage ? (
-                  <div
-                    className="absolute bottom-[10px] transition-[left] duration-300 ease-out"
-                    style={{
-                      left: `${playerLeft}px`,
-                      transform: speedShake,
-                    }}
-                  >
-                    {raceStatus === "racing" &&
-                      isPlayerDashing &&
-                      speedLevel >= 2 && (
-                        <>
-                          <img
-                            src={generatedImage}
-                            alt=""
-                            aria-hidden="true"
-                            className="absolute left-[-16px] top-0 h-[96px] w-[108px] object-contain opacity-25"
-                            style={{
-                              animation:
-                                "afterImageFade 0.32s linear infinite",
-                              imageRendering: "pixelated",
-                              filter: "sepia(1) saturate(1.3)",
-                            }}
-                          />
-                          {speedLevel >= 4 && (
-                            <img
-                              src={generatedImage}
-                              alt=""
-                              aria-hidden="true"
-                              className="absolute left-[-30px] top-1 h-[96px] w-[108px] object-contain opacity-15"
-                              style={{
-                                animation:
-                                  "afterImageFade 0.24s linear infinite 0.08s",
-                                imageRendering: "pixelated",
-                                filter: "sepia(1) saturate(1.5)",
-                              }}
-                            />
-                          )}
-                        </>
-                      )}
-                    {raceStatus === "racing" &&
-                      isPlayerDashing &&
-                      speedLevel >= 3 && (
-                        <span
-                          className="absolute bottom-[4px] left-[16px] h-[9px] w-[70px] origin-center rounded-full bg-[#fff6ce]/80"
-                          style={{
-                            animation:
-                              "groundPulse 0.28s ease-out infinite",
-                          }}
-                          aria-hidden="true"
-                        />
-                      )}
-                    {raceStatus === "racing" && isPlayerDashing && (
-                      <div
-                        className="absolute -left-6 top-10 flex gap-1"
-                        aria-hidden="true"
-                      >
-                        <span
-                          className="h-2 w-2 rounded-full bg-white/80"
-                          style={{
-                            animation: `dustPop ${dustDuration} linear infinite`,
-                            width: `${8 + speedLevel * 2}px`,
-                            height: `${8 + speedLevel * 2}px`,
-                          }}
-                        />
-                        <span
-                          className="mt-3 h-2 w-2 rounded-full bg-white/60"
-                          style={{
-                            animation: `dustPop ${dustDuration} linear infinite 0.12s`,
-                            width: `${7 + speedLevel * 2}px`,
-                            height: `${7 + speedLevel * 2}px`,
-                          }}
-                        />
-                        {speedLevel >= 2 && (
-                          <span
-                            className="mt-1 rounded-full bg-[#fff6ce]/80"
-                            style={{
-                              animation: `dustPop ${dustDuration} linear infinite 0.22s`,
-                              width: `${10 + speedLevel * 3}px`,
-                              height: `${5 + speedLevel}px`,
-                            }}
-                          />
-                        )}
-                      </div>
-                    )}
-                    <img
-                      src={generatedImage}
-                      alt="플레이어 픽셀 동물"
-                      className="h-[96px] w-[108px] object-contain"
-                      style={{
-                        animation: playerRunAnimation,
-                        imageRendering: "pixelated",
-                        filter:
-                          speedLevel >= 3
-                            ? "drop-shadow(0 7px 0 rgba(70,45,26,0.25)) drop-shadow(-10px 0 10px rgba(255,246,206,0.35))"
-                            : "drop-shadow(0 7px 0 rgba(70,45,26,0.25))",
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div
-                    className="absolute left-1/2 top-0 flex h-[104px] w-[132px] -translate-x-1/2 items-center justify-center rounded-[4px] bg-[#f2ebdd]/85 text-center text-[10px] leading-[1.5] text-[#8f7755]"
-                    style={{
-                      fontFamily: "Elice DX Neolli",
-                      fontWeight: 300,
-                      animation:
-                        state === "generating"
-                          ? "hop 0.8s ease-in-out infinite"
-                          : "none",
-                    }}
-                  >
-                    {state === "generating"
-                      ? "생성 중"
-                      : "픽셀 캐릭터가 여기서 달려요"}
-                  </div>
-                )}
-              </div>
-
-              <div className="relative z-30 mt-[360px] flex flex-col items-center gap-4 px-4 pb-7">
-                {generatedImage && (
-                  <button
-                    type="button"
-                    onClick={canDash ? handleDash : handleRestartRace}
-                    className="relative flex h-[108px] w-[108px] items-center justify-center rounded-full bg-[#fff0aa] shadow-[0_0_0_5px_rgba(92,142,60,0.55),0_0_0_11px_rgba(255,240,170,0.5),0_9px_0_rgba(56,83,38,0.25)] transition-transform active:translate-y-[3px] active:shadow-[0_0_0_5px_rgba(92,142,60,0.55),0_0_0_11px_rgba(255,240,170,0.5),0_5px_0_rgba(56,83,38,0.25)]"
-                    style={{
-                      cursor: "pointer",
-                      animation:
-                        speedLevel >= 2 && canDash
-                          ? "buttonPulse 0.55s ease-in-out infinite"
-                          : "none",
-                    }}
-                  >
-                    <span className="absolute inset-[12px] rounded-full bg-[#5f9740] shadow-inner" />
-                    <span
-                      className="absolute inset-[7px] rounded-full border-[3px] border-white/60"
-                      style={{
-                        opacity: speedRatio,
-                      }}
-                    />
-                    <span
-                      className="relative z-10 flex flex-col items-center text-center text-white"
-                      style={{
-                        fontFamily: "Elice DX Neolli",
-                        fontWeight: 700,
-                      }}
-                    >
-                      <span className="text-[11px] leading-[1.25]">
-                        {canDash ? speedLabel : "다시"}
-                      </span>
-                      <span className="text-[12px] leading-[1.25]">
-                        {canDash ? "더 빨리!" : "달리기"}
-                      </span>
-                    </span>
-                  </button>
-                )}
-
-                <div className="flex min-h-[48px] w-[278px] items-center gap-2 rounded-[6px] border border-white/70 bg-[#fff6ce] px-3 py-2 shadow-[0_3px_0_rgba(67,84,45,0.15)]">
-                  <span className="text-[18px]">💡</span>
-                  <p
-                    className="text-[10px] leading-[1.35] text-[#6b5b35]"
-                    style={{
-                      fontFamily: "Elice DX Neolli",
-                      fontWeight: 500,
-                    }}
-                  >
-                    버튼을 터치할수록 속도가 빨라져요!
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={generatedImage ? handleSave : handleGenerate}
-                  disabled={!uploadedImage || state === "generating"}
-                  className="h-[38px] w-[278px] rounded-[5px] border border-[#e9dfc8] bg-white text-[11px] tracking-[0.4px] text-[#32322d] shadow-[0_2px_0_rgba(67,84,45,0.12)] disabled:opacity-50"
-                  style={{
-                    fontFamily: "Elice DX Neolli",
-                    fontWeight: 500,
-                  }}
-                >
-                  {generatedImage ? "픽셀 PNG 저장하기" : "변환하기"}
-                </button>
-              </div>
+          staged ? (
+            <div className="mx-0 overflow-hidden">{raceContent}</div>
+          ) : (
+            <div className="mx-[14px] mt-4">
+              <WindowPanel>{raceContent}</WindowPanel>
             </div>
-          </WindowPanel>
-        </div>
+          )
         )}
       </main>
+      {staged && state === "generating" && <PixelGeneratingModal />}
     </div>
   );
 }
@@ -2053,6 +2421,10 @@ export default function App() {
         <LegacyCardVersion />
       </>
     );
+  }
+
+  if (pathname === "/classic-v2") {
+    return <ClassicV2Version />;
   }
 
   if (pathname === "/pixel-runner-stage") {
