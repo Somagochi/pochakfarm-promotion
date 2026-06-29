@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { createReadStream, existsSync, readFileSync } from "node:fs";
 import { extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createClassicV2CardAssets } from "./classic-v2-card.mjs";
 
 const rootDir = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const distDir = join(rootDir, "dist");
@@ -23,8 +24,8 @@ const mimeTypes = {
 
 const server = createServer(async (req, res) => {
   try {
-    if (req.method === "POST" && req.url === "/api/pixel-runner") {
-      await handlePixelRunner(req, res);
+    if (req.method === "POST" && req.url === "/api/classic-v2-card") {
+      await handleClassicV2Card(req, res);
       return;
     }
 
@@ -61,86 +62,19 @@ function loadEnv() {
   }
 }
 
-async function handlePixelRunner(req, res) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    sendJson(res, 500, {
-      error: "OPENAI_API_KEY가 서버 환경변수에 설정되어 있지 않아요.",
-    });
-    return;
-  }
-
-  const body = await readJson(req);
-  const image = typeof body.image === "string" ? body.image : "";
-  const name = typeof body.name === "string" ? body.name : "";
-
-  const match = image.match(/^data:(image\/(?:png|jpeg|heic|heif));base64,(.+)$/);
-  if (!match) {
-    sendJson(res, 400, {
-      error: "지원하지 않는 이미지 형식이에요. JPG, PNG, HEIC를 사용해주세요.",
-    });
-    return;
-  }
-
-  const [, mimeType, base64] = match;
-  const imageBuffer = Buffer.from(base64, "base64");
-  if (imageBuffer.length > 8 * 1024 * 1024) {
-    sendJson(res, 400, {
-      error: "이미지는 8MB 이하로 올려주세요.",
-    });
-    return;
-  }
-
-  const sourceFile = new Blob([imageBuffer], { type: mimeType });
-  const form = new FormData();
-  form.append("model", process.env.OPENAI_IMAGE_MODEL || "gpt-image-1");
-  form.append("image", sourceFile, fileNameFor(mimeType));
-  form.append("size", "1024x1024");
-  form.append("quality", "low");
-  form.append("background", "transparent");
-  form.append(
-    "prompt",
-    [
-      "Transform the provided animal photo into a single cute 16-bit pixel art game sprite.",
-      "Remove the background completely and return a transparent PNG.",
-      "Keep the animal recognizable from the source photo.",
-      "Make it side-facing, cheerful, and suitable for a looping running animation.",
-      "Use clean crisp pixel edges, no text, no frame, no shadow, no ground, no extra objects.",
-      name ? `The character name is ${name}; do not render the name in the image.` : "",
-    ]
-      .filter(Boolean)
-      .join(" "),
-  );
-
-  const response = await fetch("https://api.openai.com/v1/images/edits", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: form,
-  });
-
-  const payload = await response.json();
-  if (!response.ok) {
-    sendJson(res, response.status, {
+async function handleClassicV2Card(req, res) {
+  try {
+    const body = await readJson(req);
+    const payload = await createClassicV2CardAssets(body);
+    sendJson(res, 200, payload);
+  } catch (error) {
+    sendJson(res, error.status || 500, {
       error:
-        payload.error?.message ||
-        "OpenAI 이미지 변환 요청에 실패했어요.",
+        error instanceof Error
+          ? error.message
+          : "카드 이미지 생성 중 오류가 발생했어요.",
     });
-    return;
   }
-
-  const b64 = payload.data?.[0]?.b64_json;
-  if (!b64) {
-    sendJson(res, 502, {
-      error: "OpenAI 응답에서 이미지를 찾지 못했어요.",
-    });
-    return;
-  }
-
-  sendJson(res, 200, {
-    image: `data:image/png;base64,${b64}`,
-  });
 }
 
 function serveStatic(req, res) {
@@ -193,9 +127,3 @@ function sendJson(res, status, payload) {
   res.end(JSON.stringify(payload));
 }
 
-function fileNameFor(mimeType) {
-  if (mimeType === "image/png") return "animal.png";
-  if (mimeType === "image/heic") return "animal.heic";
-  if (mimeType === "image/heif") return "animal.heif";
-  return "animal.jpg";
-}
