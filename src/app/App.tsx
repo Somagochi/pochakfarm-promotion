@@ -58,11 +58,21 @@ const FALLBACK_CARD_ASSETS: GeneratedCardAssets = {
   frameImage: imgCharFront,
 };
 
+const ONBOARDING_SLIDES = [
+  "/assets/carousel1.png",
+  "/assets/carousel2.png",
+  "/assets/carousel3.png",
+  "/assets/carousel4.png",
+];
+const LINK_PASTE_TOAST = "/assets/linkpaste.png";
+const LOADING_ANIMAL_ICON = "/assets/loading-animal.png";
+
 const KEYFRAMES = `
   @keyframes float      { 0%,100%{transform:translateY(0)}   50%{transform:translateY(-10px)} }
   @keyframes wobble     { 0%,100%{transform:rotate(-1.5deg)} 50%{transform:rotate(1.5deg)} }
   @keyframes spotlight  { 0%,100%{opacity:0.7}              50%{opacity:1} }
   @keyframes dogBreath  { 0%,100%{opacity:1}                50%{opacity:0.12} }
+  @keyframes softPulse  { 0%,100%{transform:scale(1)}        50%{transform:scale(1.05)} }
 `;
 
 type Phase = "idle" | "processing" | "pack" | "dim" | "result";
@@ -264,6 +274,94 @@ function AnimatedPanel({
   );
 }
 
+function OnboardingCarousel({ initialSlide = 0 }: { initialSlide?: number }) {
+  const [activeSlide, setActiveSlide] = useState(initialSlide);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const slideRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const scrollTimerRef = useRef<number>();
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveSlide((slide) => (slide + 1) % ONBOARDING_SLIDES.length);
+    }, 2600);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    slideRefs.current[activeSlide]?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [activeSlide]);
+
+  const handleScroll = useCallback(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+
+    if (scrollTimerRef.current) {
+      window.clearTimeout(scrollTimerRef.current);
+    }
+
+    scrollTimerRef.current = window.setTimeout(() => {
+      const nextSlide = Math.round(scroller.scrollLeft / scroller.clientWidth);
+      setActiveSlide(
+        Math.max(0, Math.min(ONBOARDING_SLIDES.length - 1, nextSlide)),
+      );
+    }, 120);
+  }, []);
+
+  return (
+    <>
+      <div
+        ref={scrollerRef}
+        onScroll={handleScroll}
+        className="mt-4 flex h-[236px] w-full snap-x snap-mandatory overflow-x-auto scroll-smooth"
+        style={{
+          scrollbarWidth: "none",
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
+        {ONBOARDING_SLIDES.map((slide, index) => (
+          <div
+            key={slide}
+            ref={(element) => {
+              slideRefs.current[index] = element;
+            }}
+            className="flex h-full w-full shrink-0 snap-center items-center justify-center"
+            style={{ minWidth: "100%" }}
+          >
+            <img
+              src={slide}
+              alt={`온보딩 ${index + 1}`}
+              className="max-h-full max-w-full object-contain"
+              style={{ transform: "translateX(14px)" }}
+              draggable={false}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-3 flex h-[8px] items-center justify-center gap-2">
+        {ONBOARDING_SLIDES.map((slide, index) => (
+          <button
+            key={slide}
+            type="button"
+            aria-label={`온보딩 ${index + 1} 보기`}
+            onClick={() => setActiveSlide(index)}
+            className={`h-[6px] rounded-full transition-all ${
+              index === activeSlide
+                ? "w-[14px] bg-[#628d38]"
+                : "w-[6px] bg-[#e9dfc8]"
+            }`}
+          />
+        ))}
+      </div>
+    </>
+  );
+}
+
 // ── ProcessingPanel — card pack inside window frame ───────────
 function ProcessingPanel() {
   const [progress, setProgress] = useState(0);
@@ -280,68 +378,104 @@ function ProcessingPanel() {
     return () => cancelAnimationFrame(rafId);
   }, []);
 
+  const loadingStep =
+    progress < 0.3
+      ? {
+          percent: 30,
+          label: "ANALIZING...",
+          title: "동물을 분석하고 있어요",
+          description: "사진 속 특징을 읽고 카드에 어울리는 형태를 찾는 중이에요",
+        }
+      : progress < 0.62
+        ? {
+            percent: 62,
+            label: "PIXELING...",
+            title: "픽셀 캐릭터를 만들고 있어요",
+            description: "배경을 정리하고 귀여운 픽셀 스타일로 바꾸는 중이에요",
+          }
+        : progress < 0.86
+          ? {
+              percent: 86,
+              label: "PACKING...",
+              title: "카드팩에 담고 있어요",
+              description: "이름과 이미지를 조합해서 나만의 카드를 준비하고 있어요",
+            }
+          : {
+              percent: 95,
+              label: "FINISHING...",
+              title: "마지막 손질 중이에요",
+              description: "곧 완성된 카드팩을 열어볼 수 있어요",
+            };
+  const loadingPercent = Math.round(progress * 100);
+
   return (
     <WindowPanel>
-      <div className="flex flex-col items-center pt-5 pb-6 px-8 gap-4">
-        <p
-          className="text-[#628d38] text-[11px] tracking-[1.1px]"
-          style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
-        >
-          STEP 03
-        </p>
-        <p
-          className="text-[#32322d] text-[18px] tracking-[0.9px] leading-[1.4] text-center"
-          style={{
-            fontFamily: "Elice DX Neolli",
-            fontWeight: 500,
-          }}
-        >
-          변환되는 과정을
-          <br />
-          기다려주세요
-        </p>
-        <p
-          className="text-[#6a6a61] text-[10px] tracking-[0.4px] text-center"
-          style={{
-            fontFamily: "Elice DX Neolli",
-            fontWeight: 300,
-          }}
-        >
-          웹사이트를 종료하더라도
-          <br />
-          변환 과정은 유지돼요
-        </p>
-
-        {/* Dog pixel-art — breath fade animation */}
-        <div
-          style={{
-            width: "56px",
-            height: "50px",
-            position: "relative",
-            animation: "dogBreath 1.8s ease-in-out infinite",
-          }}
-        >
-          <FigmaDog />
-        </div>
-
-        {/* Progress bar */}
-        <div className="w-[200px]">
-          <div className="h-[7px] bg-[#e9dfc8] rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[#628d38] rounded-full"
-              style={{
-                width: `${progress * 100}%`,
-                transition: "width 0.1s linear",
-              }}
+      <div className="flex min-h-[590px] flex-col items-center justify-center px-6 py-5">
+        <div className="flex w-full flex-col items-center">
+          <div
+            className="relative flex h-[82px] w-[92px] items-center justify-center"
+            style={{ animation: "softPulse 1.6s ease-in-out infinite" }}
+          >
+            <img
+              src={LOADING_ANIMAL_ICON}
+              alt=""
+              className="absolute h-[70px] w-[78px] object-contain opacity-20"
+              draggable={false}
             />
+            <div
+              className="absolute bottom-[6px] h-[70px] w-[78px] overflow-hidden"
+              style={{
+                height: `${Math.max(6, progress * 70)}px`,
+                transition: "height 0.1s linear",
+              }}
+              aria-hidden="true"
+            >
+              <img
+                src={LOADING_ANIMAL_ICON}
+                alt=""
+                className="absolute bottom-0 h-[70px] w-[78px] object-contain"
+                draggable={false}
+              />
+            </div>
+            <span
+              className="relative z-10 rounded-full bg-[#faf5eb]/85 px-2 py-1 text-[12px] tracking-[0.6px] text-[#36501e]"
+              style={{
+                fontFamily: "Galmuri11",
+                fontWeight: 700,
+                boxShadow: "0 1px 0 rgba(104,85,62,0.18)",
+              }}
+            >
+              {loadingPercent}%
+            </span>
           </div>
+
           <p
-            className="text-[#a4a499] text-[9px] tracking-[0.3px] text-right mt-1"
+            className="mt-1 text-center text-[10px] tracking-[1.1px] text-[#628d38]"
             style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
           >
-            {Math.round(progress * 100)}%
+            {loadingStep.label}
+          </p>
+          <p
+            className="mt-2 text-center text-[18px] leading-[1.35] tracking-[0.7px] text-[#32322d]"
+            style={{
+              fontFamily: "Elice DX Neolli",
+              fontWeight: 500,
+            }}
+          >
+            {loadingStep.title}
+          </p>
+          <p
+            className="mt-3 min-h-[32px] px-3 text-center text-[10px] leading-[1.55] tracking-[0.35px] text-[#8f7755]"
+            style={{
+              fontFamily: "Elice DX Neolli",
+              fontWeight: 300,
+            }}
+          >
+            {loadingStep.description}
           </p>
         </div>
+
+        <OnboardingCarousel />
       </div>
     </WindowPanel>
   );
@@ -411,39 +545,47 @@ function PixelGeneratingModal() {
 function CardPackPanel({ onOpen }: { onOpen: () => void }) {
   return (
     <WindowPanel>
-      <div className="flex flex-col items-center py-8 px-6 gap-4">
-        <p
-          className="text-[#628d38] text-[11px] tracking-[1.1px]"
-          style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
-        >
-          CARD PACK READY!
-        </p>
-        <div
-          className="cursor-pointer"
-          onClick={onOpen}
-          style={{
-            animation: "float 1.8s ease-in-out infinite",
-          }}
-        >
-          <img
-            src={imgCardPack}
-            alt="카드팩"
-            className="drop-shadow-2xl"
+      <div className="flex min-h-[590px] flex-col items-center justify-center px-6 py-5">
+        <div className="flex w-full flex-col items-center">
+          <p
+            className="text-center text-[18px] tracking-[1.4px] text-[#628d38]"
+            style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
+          >
+            CARD PACK READY!
+          </p>
+
+          <button
+            type="button"
+            onClick={onOpen}
+            className="mt-5 cursor-pointer"
             style={{
-              width: "140px",
-              animation: "wobble 2.2s ease-in-out infinite",
+              animation: "float 1.8s ease-in-out infinite",
             }}
-          />
+            aria-label="카드팩 열기"
+          >
+            <img
+              src={imgCardPack}
+              alt="카드팩"
+              className="drop-shadow-2xl"
+              style={{
+                width: "184px",
+                animation: "wobble 2.2s ease-in-out infinite",
+              }}
+            />
+          </button>
+
+          <p
+            className="mt-5 text-center text-[12px] tracking-[0.45px] text-[#8f7755]"
+            style={{
+              fontFamily: "Elice DX Neolli",
+              fontWeight: 500,
+            }}
+          >
+            탭해서 카드팩을 열어보세요!
+          </p>
         </div>
-        <p
-          className="text-[#8f7755] text-[10px] tracking-[0.4px] text-center"
-          style={{
-            fontFamily: "Elice DX Neolli",
-            fontWeight: 300,
-          }}
-        >
-          탭해서 카드팩을 열어보세요!
-        </p>
+
+        <OnboardingCarousel initialSlide={2} />
       </div>
     </WindowPanel>
   );
@@ -642,6 +784,7 @@ function ResultOverlay({
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
   const dragStartAng = useRef(0);
+  const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
     // 0.8s: flip card back → front (0 → 360 so front shows)
@@ -765,8 +908,29 @@ function ResultOverlay({
     a.click();
   }, [assets.cardImage, characterName]);
 
+  const handleShare = useCallback(() => {
+    navigator.clipboard?.writeText(window.location.href).catch(() => {});
+    setShowToast(true);
+  }, []);
+
   return (
     <div className="flex flex-col items-center w-full px-6 gap-6">
+      {onRegister && (
+        <button
+          type="button"
+          onClick={onRegister}
+          className="absolute right-5 top-8 z-20 flex h-9 w-9 items-center justify-center text-[26px] leading-none text-white/95"
+          style={{
+            fontFamily: "Galmuri11",
+            fontWeight: 700,
+            textShadow: "0 2px 6px rgba(0,0,0,0.45)",
+          }}
+          aria-label="CTA 화면으로 이동"
+        >
+          ×
+        </button>
+      )}
+
       {/* Spotlight bg */}
       <div
         className="absolute inset-0 pointer-events-none opacity-0.1"
@@ -868,23 +1032,27 @@ function ResultOverlay({
             fontWeight: 500,
           }}
         >
-          이미지 저장하기
+          이미지 저장
         </span>
       </PixelButton>
 
       {onRegister && (
         <button
           type="button"
-          onClick={onRegister}
-          className="relative h-[44px] w-[280px] rounded-[5px] border border-[#d7c080] bg-[#fff0aa] text-[12px] tracking-[0.8px] text-[#36501e] shadow-[0_2px_0_rgba(67,84,45,0.18)]"
+          onClick={handleShare}
+          className="relative h-[44px] w-[280px] rounded-[5px] border border-[#d7c080] bg-[#fff0aa] text-[12px] tracking-[0.8px] text-[#68553e] shadow-[0_2px_0_rgba(67,84,45,0.18)]"
           style={{
             fontFamily: "Elice DX Neolli",
-            fontWeight: 700,
+            fontWeight: 500,
           }}
         >
-          사전등록 하기
+          친구에게 공유하기
         </button>
       )}
+      <ToastNotification
+        visible={showToast}
+        onHidden={() => setShowToast(false)}
+      />
     </div>
   );
 }
@@ -903,6 +1071,8 @@ function ClassicV2Version() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isButtonActive =
     !!uploadedImage && characterName.trim().length > 0;
+  const isPreviewMode =
+    new URLSearchParams(window.location.search).get("preview") === "1";
 
   const readFile = useCallback((file: File) => {
     if (!ACCEPTED_TYPES.has(file.type)) return;
@@ -921,6 +1091,14 @@ function ClassicV2Version() {
     setGenerationError("");
     setGeneratedAssets(null);
     setPhase("processing");
+
+    if (isPreviewMode) {
+      await new Promise((resolve) => window.setTimeout(resolve, 1400));
+      setGeneratedAssets(FALLBACK_CARD_ASSETS);
+      setPhase("pack");
+      return;
+    }
+
     try {
       const response = await fetch("/api/classic-v2-card", {
         method: "POST",
@@ -961,7 +1139,7 @@ function ClassicV2Version() {
       );
       setPhase("idle");
     }
-  }, [characterName, isButtonActive, uploadedImage]);
+  }, [characterName, isButtonActive, isPreviewMode, uploadedImage]);
 
   const handleOpenPack = useCallback(() => setPhase("dim"), []);
   const handleResult = useCallback(() => {
@@ -1163,21 +1341,8 @@ function ClassicV2Version() {
           <ProcessingPanel />
         )}
 
-        {["pack", "dim", "result"].includes(phase) && (
-          <div className="relative">
-            <button
-              type="button"
-              onClick={handleReset}
-              className="absolute right-4 top-4 z-40 rounded-[5px] bg-[#36501e]/85 px-3 py-1.5 text-[10px] text-white shadow-[0_2px_0_rgba(39,53,31,0.25)]"
-              style={{
-                fontFamily: "Elice DX Neolli",
-                fontWeight: 500,
-              }}
-            >
-              처음으로
-            </button>
-            <CardPackPanel onOpen={handleOpenPack} />
-          </div>
+        {phase === "pack" && (
+          <CardPackPanel onOpen={handleOpenPack} />
         )}
       </main>
 
@@ -1202,6 +1367,11 @@ function ToastNotification({
   onHidden?: () => void;
 }) {
   const [phase, setPhase] = useState<"hidden" | "show" | "exit">("hidden");
+  const onHiddenRef = useRef(onHidden);
+
+  useEffect(() => {
+    onHiddenRef.current = onHidden;
+  }, [onHidden]);
 
   useEffect(() => {
     if (!visible) return;
@@ -1210,14 +1380,14 @@ function ToastNotification({
     const exitTimer = window.setTimeout(() => setPhase("exit"), 2200);
     const hiddenTimer = window.setTimeout(() => {
       setPhase("hidden");
-      onHidden?.();
+      onHiddenRef.current?.();
     }, 2600);
 
     return () => {
       window.clearTimeout(exitTimer);
       window.clearTimeout(hiddenTimer);
     };
-  }, [visible, onHidden]);
+  }, [visible]);
 
   if (phase === "hidden") return null;
 
@@ -1225,7 +1395,7 @@ function ToastNotification({
 
   return (
     <div
-      className="fixed left-1/2 z-[220] flex w-[280px] items-center justify-center rounded-[6px] border border-[#cdb792] bg-[#f2ebdd] px-4 py-3 shadow-[0_4px_0_rgba(69,55,42,0.18)]"
+      className="fixed left-1/2 z-[220] flex w-[293px] items-center justify-center"
       style={{
         bottom: "48px",
         opacity: isVisible ? 1 : 0,
@@ -1233,12 +1403,12 @@ function ToastNotification({
         transition: "transform 0.28s ease, opacity 0.28s ease",
       }}
     >
-      <span
-        className="text-[11px] tracking-[1.1px] text-[#45372a]"
-        style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
-      >
-        링크가 복사되었습니다
-      </span>
+      <img
+        src={LINK_PASTE_TOAST}
+        alt="링크가 복사되었습니다"
+        className="h-auto w-full"
+        draggable={false}
+      />
     </div>
   );
 }
@@ -1252,18 +1422,53 @@ function EarlyRegistrationDialog({
 }) {
   const [phone, setPhone] = useState("");
   const [required, setRequired] = useState(false);
-  const [optional, setOptional] = useState(false);
+  const [view, setView] = useState<"form" | "terms">("form");
   const digits = phone.replace(/\D/g, "");
-  const canSubmit = digits.length >= 9 && required;
+  const formattedPhone =
+    digits.length <= 3
+      ? digits
+      : digits.length <= 7
+        ? `${digits.slice(0, 3)}-${digits.slice(3)}`
+        : `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
+  const canSubmit = digits.length === 11 && required;
+  const termsSections = [
+    {
+      title: "수집·이용 목적",
+      items: [
+        "사전예약 신청 접수 및 신청자 확인",
+        "앱 출시 시 다운로드 링크 안내",
+        "사전예약 보상 쿠폰 번호 발송",
+        "중복 신청 방지",
+      ],
+    },
+    {
+      title: "수집 항목",
+      items: ["휴대전화번호"],
+    },
+    {
+      title: "보유 및 이용 기간",
+      items: [
+        "사전예약 이벤트 종료 후 1개월까지",
+        "단, 관련 법령에 따라 보관이 필요한 경우 해당 법령에서 정한 기간 동안 보관",
+      ],
+    },
+    {
+      title: "동의 거부 권리 및 불이익",
+      items: [
+        "이용자는 개인정보 수집 및 이용에 대한 동의를 거부할 수 있습니다.",
+        "다만, 필수 항목에 동의하지 않을 경우 사전예약 신청, 앱 출시 안내 및 사전예약 보상 쿠폰 제공이 제한됩니다.",
+      ],
+    },
+  ];
 
   return (
     <div
-      className="fixed inset-0 z-[210] flex items-end justify-center bg-black/70 sm:items-center"
+      className="fixed inset-0 z-[210] flex items-center justify-center bg-black/70 px-4"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-[360px] rounded-t-[20px] border-2 border-[#cdb792] bg-[#faf5eb] px-6 pb-6 pt-5 shadow-2xl sm:rounded-[16px]">
+      <div className="max-h-[calc(100dvh-32px)] w-full max-w-[360px] overflow-y-auto rounded-[16px] border-2 border-[#cdb792] bg-[#faf5eb] px-6 pb-6 pt-5 shadow-2xl">
         <div className="relative text-center">
           <button
             type="button"
@@ -1277,94 +1482,131 @@ function EarlyRegistrationDialog({
             className="text-[18px] leading-[1.4] tracking-[0.9px] text-[#32322d]"
             style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
           >
-            미리 농장주 등록
+            {view === "terms" ? "개인정보 수집 및 이용 동의" : "얼리 농장주 등록"}
           </h2>
-          <p
-            className="mt-2 text-[10px] leading-[1.6] tracking-[0.4px] text-[#6a6a61]"
-            style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
-          >
-            앱이 출시되면 문자로 알려드려요
-            <br />
-            사전예약자에게는 한정 보상을 드려요
-          </p>
-        </div>
-
-        <label
-          className="mt-5 block text-[11px] tracking-[0.5px] text-[#32322d]"
-          style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
-        >
-          전화번호
-        </label>
-        <input
-          type="tel"
-          value={phone}
-          onChange={(event) =>
-            setPhone(event.target.value.replace(/\D/g, "").slice(0, 11))
-          }
-          placeholder="01000000000"
-          className="mt-2 h-[48px] w-full rounded-[8px] border border-[#cdb792] bg-white px-4 text-[14px] tracking-[0.5px] text-[#32322d] placeholder:text-[#cdb792] focus:border-[#628d38] focus:outline-none"
-          style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
-        />
-
-        <div className="mt-4 flex flex-col gap-3">
-          <button
-            type="button"
-            onClick={() => setRequired((value) => !value)}
-            className="flex items-center gap-3 text-left"
-          >
-            <span
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[4px] border-2 text-[12px] text-white"
-              style={{
-                borderColor: required ? "#628d38" : "#cdb792",
-                background: required ? "#628d38" : "white",
-              }}
-            >
-              {required ? "✓" : ""}
-            </span>
-            <span
-              className="flex-1 text-[10px] tracking-[0.4px] text-[#45372a]"
+          {view === "form" && (
+            <p
+              className="mt-2 text-[10px] leading-[1.6] tracking-[0.4px] text-[#6a6a61]"
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
             >
-              <span className="text-[#628d38]">[필수]</span> 개인정보 수집 및 이용 동의
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setOptional((value) => !value)}
-            className="flex items-center gap-3 text-left"
-          >
-            <span
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[4px] border-2 text-[12px] text-white"
-              style={{
-                borderColor: optional ? "#628d38" : "#cdb792",
-                background: optional ? "#628d38" : "white",
-              }}
-            >
-              {optional ? "✓" : ""}
-            </span>
-            <span
-              className="flex-1 text-[10px] tracking-[0.4px] text-[#a4a499]"
-              style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
-            >
-              [선택] 이벤트/혜택 알림 수신 동의
-            </span>
-          </button>
+              앱이 출시되면 문자로 알려드려요
+              <br />
+              사전예약자에게는 한정 보상을 드려요
+            </p>
+          )}
         </div>
 
-        <button
-          type="button"
-          onClick={canSubmit ? onComplete : undefined}
-          className="mt-5 flex h-[52px] w-full items-center justify-center rounded-[12px] text-[16px] tracking-[1.6px] text-white"
-          style={{
-            background: canSubmit ? "#628d38" : "#cdb792",
-            cursor: canSubmit ? "pointer" : "not-allowed",
-            fontFamily: "Elice DX Neolli",
-            fontWeight: 500,
-          }}
-        >
-          등록하기
-        </button>
+        {view === "form" ? (
+          <>
+            <label
+              className="mt-5 block text-[11px] tracking-[0.5px] text-[#32322d]"
+              style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+            >
+              전화번호
+            </label>
+            <input
+              type="tel"
+              value={formattedPhone}
+              onChange={(event) =>
+                setPhone(event.target.value.replace(/\D/g, "").slice(0, 11))
+              }
+              placeholder="000-0000-0000"
+              className="mt-2 h-[48px] w-full rounded-[8px] border border-[#cdb792] bg-white px-4 text-[14px] tracking-[0.5px] text-[#32322d] placeholder:text-[#cdb792] focus:border-[#628d38] focus:outline-none"
+              style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
+            />
+
+            <div className="mt-4 flex flex-col gap-3">
+              <div className="flex items-center gap-3 text-left">
+                <button
+                  type="button"
+                  onClick={() => setRequired((value) => !value)}
+                  className="flex flex-1 items-center gap-3 text-left"
+                >
+                  <span
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[4px] border-2 text-[12px] text-white"
+                    style={{
+                      borderColor: required ? "#628d38" : "#cdb792",
+                      background: required ? "#628d38" : "white",
+                    }}
+                  >
+                    {required ? "✓" : ""}
+                  </span>
+                  <span
+                    className="flex-1 text-[10px] tracking-[0.4px] text-[#45372a]"
+                    style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
+                  >
+                    <span className="text-[#628d38]">[필수]</span> 개인정보 수집 및 이용 동의
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView("terms")}
+                  className="h-7 rounded-[5px] border border-[#cdb792] bg-[#fffdf8] px-2 text-[10px] tracking-[0.4px] text-[#68553e]"
+                  style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+                >
+                  보기
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={canSubmit ? onComplete : undefined}
+              className="mt-5 flex h-[52px] w-full items-center justify-center rounded-[12px] text-[16px] tracking-[1.6px] text-white"
+              style={{
+                background: canSubmit ? "#628d38" : "#cdb792",
+                cursor: canSubmit ? "pointer" : "not-allowed",
+                fontFamily: "Elice DX Neolli",
+                fontWeight: 500,
+              }}
+            >
+              등록하기
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="mt-5 max-h-[390px] overflow-y-auto rounded-[8px] border border-[#cdb792] bg-[#fffdf8] px-4 py-4">
+              <p
+                className="text-[10px] leading-[1.65] tracking-[0.35px] text-[#45372a]"
+                style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
+              >
+                포착팜은 얼리 농장주 사전예약 신청 및 사전예약 보상 제공을 위해 아래와 같이 개인정보를 수집·이용합니다.
+              </p>
+
+              {termsSections.map((section) => (
+                <div key={section.title} className="mt-4">
+                  <p
+                    className="text-[11px] tracking-[0.5px] text-[#628d38]"
+                    style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+                  >
+                    {section.title}
+                  </p>
+                  <ul className="mt-2 flex flex-col gap-1.5">
+                    {section.items.map((item) => (
+                      <li
+                        key={item}
+                        className="flex gap-2 text-[10px] leading-[1.55] tracking-[0.3px] text-[#6a6a61]"
+                        style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
+                      >
+                        <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-[#cdb792]" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setView("form")}
+              className="mt-5 flex h-[48px] w-full items-center justify-center rounded-[12px] bg-[#628d38] text-[15px] tracking-[1.2px] text-white"
+              style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+            >
+              확인
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1444,7 +1686,7 @@ function CTAPage({
               {["출시 알림 문자", "사전예약 한정 보상", "농장 입주 소식"].map(
                 (reward) => (
                   <div key={reward} className="mt-2 flex items-center gap-2">
-                    <span className="h-4 w-4 shrink-0 rounded-[3px] bg-[#628d38]" />
+                    <span className="h-4 w-4 shrink-0 rounded-[3px] border border-[#cdb792] bg-white" />
                     <span
                       className="text-[10px] tracking-[0.4px] text-[#6a6a61]"
                       style={{
@@ -1464,7 +1706,7 @@ function CTAPage({
                 className="w-full text-center text-[16px] tracking-[1.6px] text-white"
                 style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
               >
-                사전등록 하기
+                오픈 알림 받기
               </span>
             </PixelButton>
 
