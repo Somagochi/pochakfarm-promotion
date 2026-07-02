@@ -117,6 +117,61 @@ function createCtaShareLink(characterName: string, aiImage: string | null) {
   return url.toString();
 }
 
+function getCardDownloadName(characterName: string) {
+  const safeName = (characterName || "character")
+    .replace(/[\\/:*?"<>|]/g, "")
+    .replace(/\s+/g, "-")
+    .trim();
+  return `${safeName || "character"}-card.png`;
+}
+
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.rel = "noopener";
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1200);
+}
+
+async function saveCardImage(imageUrl: string, characterName: string) {
+  const filename = getCardDownloadName(characterName);
+  const response = await fetch(
+    `/api/download-image?url=${encodeURIComponent(imageUrl)}&name=${encodeURIComponent(
+      characterName || "character-card",
+    )}`,
+  );
+
+  if (!response.ok) {
+    throw new Error("이미지를 저장하지 못했어요.");
+  }
+
+  const blob = await response.blob();
+  const file = new File([blob], filename, {
+    type: blob.type || "image/png",
+  });
+  const sharePayload = {
+    files: [file],
+    title: filename,
+  };
+
+  if (navigator.canShare?.(sharePayload)) {
+    try {
+      await navigator.share(sharePayload);
+      return;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+    }
+  }
+
+  triggerBlobDownload(blob, filename);
+}
+
 async function createUploadPreview(file: File) {
   const sourceUrl = URL.createObjectURL(file);
 
@@ -930,15 +985,18 @@ function ResultOverlay({
     window.addEventListener("mouseup", onUp);
   };
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     trackEvent("card_saved");
 
-    const a = document.createElement("a");
-    a.download = `${characterName || "character"}-card.png`;
-    a.href = `/api/download-image?url=${encodeURIComponent(
-      assets.cardImage,
-    )}&name=${encodeURIComponent(characterName || "character-card")}`;
-    a.click();
+    try {
+      await saveCardImage(assets.cardImage, characterName);
+    } catch (error) {
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "이미지를 저장하지 못했어요.",
+      );
+    }
   }, [assets.cardImage, characterName]);
 
   const handleShare = useCallback(async () => {
