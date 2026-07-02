@@ -41,21 +41,22 @@ import imgFoot5 from "../imports/2200포착-11/edb1471405b6ca6dffee78680c6cd49cb
 const ACCEPTED_TYPES = new Set([
   "image/jpeg",
   "image/png",
-  "image/heic",
-  "image/heif",
+  "image/webp",
 ]);
+const MAX_UPLOAD_IMAGE_DIMENSION = 1280;
+const UPLOAD_IMAGE_QUALITY = 0.82;
 const NAME_FILTER = /[^ㄱ-ㅎ가-힣a-zA-Z0-9\s]/g;
 
 type GeneratedCardAssets = {
   cardImage: string;
   cardBackImage: string;
-  frameImage: string;
+  aiImage: string;
 };
 
 const FALLBACK_CARD_ASSETS: GeneratedCardAssets = {
   cardImage: imgCharFront,
   cardBackImage: imgCardBack,
-  frameImage: imgCharFront,
+  aiImage: imgCharFront,
 };
 
 const ONBOARDING_SLIDES = [
@@ -76,6 +77,69 @@ const KEYFRAMES = `
 `;
 
 type Phase = "idle" | "processing" | "pack" | "dim" | "result";
+
+async function copyShareLink() {
+  const url = window.location.href;
+
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(url);
+      return true;
+    } catch {
+      // Fall through to the textarea fallback below.
+    }
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = url;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  textarea.style.top = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  try {
+    return document.execCommand("copy");
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
+async function createUploadPreview(file: File) {
+  const sourceUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("이미지를 읽지 못했어요."));
+      img.src = sourceUrl;
+    });
+
+    const scale = Math.min(
+      1,
+      MAX_UPLOAD_IMAGE_DIMENSION / Math.max(image.width, image.height),
+    );
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("이미지를 처리하지 못했어요.");
+    }
+
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    context.drawImage(image, 0, 0, width, height);
+    return canvas.toDataURL("image/jpeg", UPLOAD_IMAGE_QUALITY);
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
 
 // ── PixelButton ──────────────────────────────────────────────
 function PixelButton({
@@ -366,7 +430,7 @@ function OnboardingCarousel({ initialSlide = 0 }: { initialSlide?: number }) {
 function ProcessingPanel() {
   const [progress, setProgress] = useState(0);
   useEffect(() => {
-    const DURATION = 12000;
+    const DURATION = 22000;
     const start = Date.now();
     let rafId: number;
     const tick = () => {
@@ -908,9 +972,10 @@ function ResultOverlay({
     a.click();
   }, [assets.cardImage, characterName]);
 
-  const handleShare = useCallback(() => {
-    navigator.clipboard?.writeText(window.location.href).catch(() => {});
-    setShowToast(true);
+  const handleShare = useCallback(async () => {
+    if (await copyShareLink()) {
+      setShowToast(true);
+    }
   }, []);
 
   return (
@@ -1074,15 +1139,22 @@ function ClassicV2Version() {
   const isPreviewMode =
     new URLSearchParams(window.location.search).get("preview") === "1";
 
-  const readFile = useCallback((file: File) => {
+  const readFile = useCallback(async (file: File) => {
     if (!ACCEPTED_TYPES.has(file.type)) return;
     trackEvent("classic_v2_photo_upload_started", {
       file_type: file.type,
     });
-    const reader = new FileReader();
-    reader.onload = (e) =>
-      setUploadedImage(e.target?.result as string);
-    reader.readAsDataURL(file);
+    setGenerationError("");
+
+    try {
+      setUploadedImage(await createUploadPreview(file));
+    } catch (error) {
+      setGenerationError(
+        error instanceof Error
+          ? error.message
+          : "이미지를 읽지 못했어요.",
+      );
+    }
   }, []);
 
   const handleConvert = useCallback(async () => {
@@ -1102,6 +1174,7 @@ function ClassicV2Version() {
     try {
       const response = await fetch("/api/classic-v2-card", {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -1125,10 +1198,10 @@ function ClassicV2Version() {
           typeof payload.cardBackImage === "string"
             ? payload.cardBackImage
             : FALLBACK_CARD_ASSETS.cardBackImage,
-        frameImage:
-          typeof payload.frameImage === "string"
-            ? payload.frameImage
-            : FALLBACK_CARD_ASSETS.frameImage,
+        aiImage:
+          typeof payload.aiImage === "string"
+            ? payload.aiImage
+            : FALLBACK_CARD_ASSETS.aiImage,
       });
       setPhase("pack");
     } catch (error) {
@@ -1163,7 +1236,7 @@ function ClassicV2Version() {
     return (
       <CTAPage
         characterName={characterName.trim()}
-        frameImage={generatedAssets?.frameImage ?? null}
+        aiImage={generatedAssets?.aiImage ?? null}
         onBack={() => setRegistrationView(null)}
         onComplete={() => setRegistrationView("complete")}
       />
@@ -1236,7 +1309,7 @@ function ClassicV2Version() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/heic"
+                accept="image/jpeg,image/png,image/webp"
                 onChange={(e) => {
                   if (e.target.files?.[0]) readFile(e.target.files[0]);
                 }}
@@ -1423,6 +1496,8 @@ function EarlyRegistrationDialog({
   const [phone, setPhone] = useState("");
   const [required, setRequired] = useState(false);
   const [view, setView] = useState<"form" | "terms">("form");
+  const [registrationError, setRegistrationError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const digits = phone.replace(/\D/g, "");
   const formattedPhone =
     digits.length <= 3
@@ -1431,6 +1506,52 @@ function EarlyRegistrationDialog({
         ? `${digits.slice(0, 3)}-${digits.slice(3)}`
         : `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
   const canSubmit = digits.length === 11 && required;
+  const handleSubmit = useCallback(async () => {
+    if (!canSubmit || isSubmitting) return;
+
+    setRegistrationError("");
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/pre-registrations", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phoneNumber: digits,
+          requiredConsent: true,
+        }),
+      });
+      const isJsonResponse = response.headers
+        .get("content-type")
+        ?.includes("application/json");
+      const payload = isJsonResponse
+        ? await response.json().catch(() => ({}))
+        : {};
+
+      if (!response.ok) {
+        throw new Error(
+          payload.error || "사전예약 등록에 실패했어요.",
+        );
+      }
+
+      if (!isJsonResponse) {
+        throw new Error("사전예약 API 응답이 올바르지 않아요.");
+      }
+
+      onComplete();
+    } catch (error) {
+      setRegistrationError(
+        error instanceof Error
+          ? error.message
+          : "사전예약 등록에 실패했어요.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [canSubmit, digits, isSubmitting, onComplete]);
   const termsSections = [
     {
       title: "수집·이용 목적",
@@ -1507,13 +1628,26 @@ function EarlyRegistrationDialog({
             <input
               type="tel"
               value={formattedPhone}
-              onChange={(event) =>
-                setPhone(event.target.value.replace(/\D/g, "").slice(0, 11))
-              }
+              onChange={(event) => {
+                setPhone(event.target.value.replace(/\D/g, "").slice(0, 11));
+                setRegistrationError("");
+              }}
               placeholder="000-0000-0000"
-              className="mt-2 h-[48px] w-full rounded-[8px] border border-[#cdb792] bg-white px-4 text-[14px] tracking-[0.5px] text-[#32322d] placeholder:text-[#cdb792] focus:border-[#628d38] focus:outline-none"
+              className={`mt-2 h-[48px] w-full rounded-[8px] border bg-white px-4 text-[14px] tracking-[0.5px] text-[#32322d] placeholder:text-[#cdb792] focus:outline-none ${
+                registrationError
+                  ? "border-[#d94b3d] focus:border-[#d94b3d]"
+                  : "border-[#cdb792] focus:border-[#628d38]"
+              }`}
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
             />
+            {registrationError && (
+              <p
+                className="mt-2 text-[10px] leading-[1.4] tracking-[0.3px] text-[#d94b3d]"
+                style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+              >
+                {registrationError}
+              </p>
+            )}
 
             <div className="mt-4 flex flex-col gap-3">
               <div className="flex items-center gap-3 text-left">
@@ -1551,16 +1685,17 @@ function EarlyRegistrationDialog({
 
             <button
               type="button"
-              onClick={canSubmit ? onComplete : undefined}
+              onClick={handleSubmit}
+              disabled={!canSubmit || isSubmitting}
               className="mt-5 flex h-[52px] w-full items-center justify-center rounded-[12px] text-[16px] tracking-[1.6px] text-white"
               style={{
-                background: canSubmit ? "#628d38" : "#cdb792",
-                cursor: canSubmit ? "pointer" : "not-allowed",
+                background: canSubmit && !isSubmitting ? "#628d38" : "#cdb792",
+                cursor: canSubmit && !isSubmitting ? "pointer" : "not-allowed",
                 fontFamily: "Elice DX Neolli",
                 fontWeight: 500,
               }}
             >
-              등록하기
+              {isSubmitting ? "등록 중..." : "등록하기"}
             </button>
           </>
         ) : (
@@ -1614,21 +1749,22 @@ function EarlyRegistrationDialog({
 
 function CTAPage({
   characterName,
-  frameImage,
+  aiImage,
   onComplete,
   onBack,
 }: {
   characterName: string;
-  frameImage: string | null;
+  aiImage: string | null;
   onComplete: () => void;
   onBack: () => void;
 }) {
   const [showDialog, setShowDialog] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
-  const handleShare = () => {
-    navigator.clipboard?.writeText(window.location.href).catch(() => {});
-    setShowToast(true);
+  const handleShare = async () => {
+    if (await copyShareLink()) {
+      setShowToast(true);
+    }
   };
 
   return (
@@ -1661,9 +1797,9 @@ function CTAPage({
             </p>
 
             <div className="relative h-[206px] w-[206px] overflow-hidden rounded-[8px] border border-[#a4a499] bg-[#fafaf8] shadow-md">
-              {frameImage ? (
+              {aiImage ? (
                 <img
-                  src={frameImage}
+                  src={aiImage}
                   alt=""
                   className="absolute inset-0 h-full w-full object-cover"
                 />
@@ -1753,10 +1889,11 @@ function CompletePage({
   onShareAgain: () => void;
 }) {
   const [showToast, setShowToast] = useState(false);
-  const handleShare = () => {
-    navigator.clipboard?.writeText(window.location.href).catch(() => {});
-    setShowToast(true);
-    onShareAgain();
+  const handleShare = async () => {
+    if (await copyShareLink()) {
+      setShowToast(true);
+      onShareAgain();
+    }
   };
 
   return (

@@ -3,6 +3,7 @@ import { createReadStream, existsSync, readFileSync } from "node:fs";
 import { extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClassicV2CardAssets } from "./classic-v2-card.mjs";
+import { createPreRegistration } from "./pre-registration.mjs";
 
 const rootDir = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const distDir = join(rootDir, "dist");
@@ -24,8 +25,28 @@ const mimeTypes = {
 
 const server = createServer(async (req, res) => {
   try {
-    if (req.method === "POST" && req.url === "/api/classic-v2-card") {
-      await handleClassicV2Card(req, res);
+    const pathname = decodeURIComponent((req.url || "/").split("?")[0]);
+
+    if (pathname === "/api/classic-v2-card") {
+      if (req.method === "POST") {
+        await handleClassicV2Card(req, res);
+      } else {
+        sendMethodNotAllowed(res);
+      }
+      return;
+    }
+
+    if (pathname === "/api/pre-registrations") {
+      if (req.method === "POST") {
+        await handlePreRegistration(req, res);
+      } else {
+        sendMethodNotAllowed(res);
+      }
+      return;
+    }
+
+    if (pathname.startsWith("/api/")) {
+      sendJson(res, 404, { error: "API route not found" });
       return;
     }
 
@@ -65,7 +86,10 @@ function loadEnv() {
 async function handleClassicV2Card(req, res) {
   try {
     const body = await readJson(req);
-    const payload = await createClassicV2CardAssets(body);
+    const payload = await createClassicV2CardAssets(body, process.env, {
+      cookie: req.headers.cookie || "",
+      onSetCookie: (setCookie) => res.setHeader("Set-Cookie", setCookie),
+    });
     sendJson(res, 200, payload);
   } catch (error) {
     sendJson(res, error.status || 500, {
@@ -73,6 +97,24 @@ async function handleClassicV2Card(req, res) {
         error instanceof Error
           ? error.message
           : "카드 이미지 생성 중 오류가 발생했어요.",
+    });
+  }
+}
+
+async function handlePreRegistration(req, res) {
+  try {
+    const body = await readJson(req);
+    const payload = await createPreRegistration(body, process.env, {
+      cookie: req.headers.cookie || "",
+      onSetCookie: (setCookie) => res.setHeader("Set-Cookie", setCookie),
+    });
+    sendJson(res, 200, payload);
+  } catch (error) {
+    sendJson(res, error.status || 500, {
+      error:
+        error instanceof Error
+          ? error.message
+          : "사전예약 등록 중 오류가 발생했어요.",
     });
   }
 }
@@ -125,5 +167,13 @@ function sendJson(res, status, payload) {
     "Content-Type": "application/json; charset=utf-8",
   });
   res.end(JSON.stringify(payload));
+}
+
+function sendMethodNotAllowed(res) {
+  res.writeHead(405, {
+    Allow: "POST",
+    "Content-Type": "application/json; charset=utf-8",
+  });
+  res.end(JSON.stringify({ error: "Method Not Allowed" }));
 }
 

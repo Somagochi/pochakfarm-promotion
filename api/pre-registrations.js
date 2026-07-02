@@ -1,12 +1,7 @@
-import { createClassicV2CardAssets } from "../server/classic-v2-card.mjs";
+import { createPreRegistration } from "../server/pre-registration.mjs";
 
 export const config = {
-  maxDuration: 120,
-  api: {
-    bodyParser: {
-      sizeLimit: "10mb",
-    },
-  },
+  maxDuration: 15,
 };
 
 export default async function handler(req, res) {
@@ -19,7 +14,7 @@ export default async function handler(req, res) {
   try {
     const body =
       typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
-    const payload = await createClassicV2CardAssets(body, process.env, {
+    const payload = await createPreRegistration(body, process.env, {
       cookie: req.headers.cookie || "",
       onSetCookie: (setCookie) => res.setHeader("Set-Cookie", setCookie),
     });
@@ -29,7 +24,7 @@ export default async function handler(req, res) {
       error:
         error instanceof Error
           ? error.message
-          : "카드 이미지 생성 중 오류가 발생했어요.",
+          : "사전예약 등록 중 오류가 발생했어요.",
     });
   }
 }
