@@ -611,7 +611,12 @@ function OnboardingCarousel({ initialSlide = 0 }: { initialSlide?: number }) {
             key={slide}
             type="button"
             aria-label={`온보딩 ${index + 1} 보기`}
-            onClick={() => setActiveSlide(index)}
+            onClick={() => {
+              trackEvent("onboarding_slide_selected", {
+                slide_index: index + 1,
+              });
+              setActiveSlide(index);
+            }}
             className={`h-[6px] rounded-full transition-all ${
               index === activeSlide
                 ? "w-[14px] bg-[#628d38]"
@@ -1052,7 +1057,16 @@ function ResultOverlay({
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
   const dragStartAng = useRef(0);
+  const trackedCardInteractionRef = useRef(false);
   const [showToast, setShowToast] = useState(false);
+
+  const trackCardInteraction = useCallback((method: "mouse" | "touch") => {
+    if (trackedCardInteractionRef.current) return;
+    trackedCardInteractionRef.current = true;
+    trackEvent("classic_v2_result_card_interacted", {
+      method,
+    });
+  }, []);
 
   useEffect(() => {
     // 0.8s: flip card back → front (0 → 360 so front shows)
@@ -1091,6 +1105,7 @@ function ResultOverlay({
   // Touch swipe handlers
   const onTouchStart = (e: React.TouchEvent) => {
     if (mode !== "spinning") return;
+    trackCardInteraction("touch");
     isDragging.current = true;
     dragStartX.current = e.touches[0].clientX;
     dragStartAng.current = angle;
@@ -1107,6 +1122,7 @@ function ResultOverlay({
   // Mouse drag — global listeners so it works outside the element
   const onMouseDown = (e: React.MouseEvent) => {
     if (mode !== "spinning") return;
+    trackCardInteraction("mouse");
     isDragging.current = true;
     dragStartX.current = e.clientX;
     dragStartAng.current = angle;
@@ -1125,11 +1141,16 @@ function ResultOverlay({
   };
 
   const handleSave = useCallback(async () => {
-    trackEvent("card_saved");
+    trackEvent("classic_v2_card_save_clicked");
 
     try {
       await saveCardImage(assets.cardImage, characterName);
+      trackEvent("classic_v2_card_save_completed");
     } catch (error) {
+      trackEvent("classic_v2_card_save_failed", {
+        message:
+          error instanceof Error ? error.message : "unknown_error",
+      });
       window.alert(
         error instanceof Error
           ? error.message
@@ -1139,8 +1160,12 @@ function ResultOverlay({
   }, [assets.cardImage, characterName]);
 
   const handleShare = useCallback(async () => {
+    trackEvent("classic_v2_result_share_clicked");
     if (await copyShareLink(createCtaShareLink(characterName, assets.aiImage))) {
+      trackEvent("classic_v2_result_share_copied");
       setShowToast(true);
+    } else {
+      trackEvent("classic_v2_result_share_failed");
     }
   }, [assets.aiImage, characterName]);
 
@@ -1149,7 +1174,10 @@ function ResultOverlay({
       {onRegister && (
         <button
           type="button"
-          onClick={onRegister}
+          onClick={() => {
+            trackEvent("classic_v2_cta_opened_from_result");
+            onRegister();
+          }}
           className="absolute right-5 top-8 z-20 flex h-9 w-9 items-center justify-center text-[26px] leading-none text-white/95"
           style={{
             fontFamily: "Galmuri11",
@@ -1304,20 +1332,49 @@ function ClassicV2Version() {
     "cta" | "complete" | null
   >(isSharedCta ? "cta" : null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const trackedNameInputRef = useRef(false);
   const isButtonActive =
     !!uploadedImage && characterName.trim().length > 0;
   const isPreviewMode = searchParams.get("preview") === "1";
 
+  useEffect(() => {
+    trackEvent("classic_v2_page_viewed", {
+      is_shared_cta: isSharedCta,
+      is_preview: isPreviewMode,
+    });
+  }, [isPreviewMode, isSharedCta]);
+
+  useEffect(() => {
+    trackEvent("classic_v2_phase_viewed", {
+      phase,
+    });
+  }, [phase]);
+
   const readFile = useCallback(async (file: File) => {
-    if (!ACCEPTED_TYPES.has(file.type)) return;
+    if (!ACCEPTED_TYPES.has(file.type)) {
+      trackEvent("classic_v2_photo_upload_rejected", {
+        file_type: file.type || "unknown",
+      });
+      return;
+    }
     trackEvent("classic_v2_photo_upload_started", {
       file_type: file.type,
+      file_size_kb: Math.round(file.size / 1024),
     });
     setGenerationError("");
 
     try {
       setUploadedImage(await createUploadPreview(file));
+      trackEvent("classic_v2_photo_upload_completed", {
+        file_type: file.type,
+        file_size_kb: Math.round(file.size / 1024),
+      });
     } catch (error) {
+      trackEvent("classic_v2_photo_upload_failed", {
+        file_type: file.type,
+        message:
+          error instanceof Error ? error.message : "unknown_error",
+      });
       setGenerationError(
         error instanceof Error
           ? error.message
@@ -1328,7 +1385,10 @@ function ClassicV2Version() {
 
   const handleConvert = useCallback(async () => {
     if (!isButtonActive) return;
-    trackEvent("classic_v2_convert_started");
+    trackEvent("classic_v2_convert_started", {
+      name_length: characterName.trim().length,
+      is_preview: isPreviewMode,
+    });
     setGenerationError("");
     setGeneratedAssets(null);
     setPhase("processing");
@@ -1337,6 +1397,9 @@ function ClassicV2Version() {
       await new Promise((resolve) => window.setTimeout(resolve, 1400));
       setGeneratedAssets(FALLBACK_CARD_ASSETS);
       setPhase("pack");
+      trackEvent("classic_v2_convert_completed", {
+        mode: "preview",
+      });
       return;
     }
 
@@ -1373,7 +1436,14 @@ function ClassicV2Version() {
             : FALLBACK_CARD_ASSETS.aiImage,
       });
       setPhase("pack");
+      trackEvent("classic_v2_convert_completed", {
+        mode: "api",
+      });
     } catch (error) {
+      trackEvent("classic_v2_convert_failed", {
+        message:
+          error instanceof Error ? error.message : "unknown_error",
+      });
       setGenerationError(
         error instanceof Error
           ? error.message
@@ -1383,13 +1453,17 @@ function ClassicV2Version() {
     }
   }, [characterName, isButtonActive, isPreviewMode, uploadedImage]);
 
-  const handleOpenPack = useCallback(() => setPhase("dim"), []);
+  const handleOpenPack = useCallback(() => {
+    trackEvent("classic_v2_card_pack_opened");
+    setPhase("dim");
+  }, []);
   const handleResult = useCallback(() => {
     trackEvent("classic_v2_result_viewed");
     setPhase("result");
   }, []);
 
   const handleReset = useCallback(() => {
+    trackEvent("classic_v2_reset_clicked");
     setPhase("idle");
     setUploadedImage(null);
     setGeneratedAssets(null);
@@ -1482,7 +1556,10 @@ function ClassicV2Version() {
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 onChange={(e) => {
-                  if (e.target.files?.[0]) readFile(e.target.files[0]);
+                  if (e.target.files?.[0]) {
+                    trackEvent("classic_v2_photo_selected");
+                    readFile(e.target.files[0]);
+                  }
                 }}
                 className="hidden"
               />
@@ -1504,10 +1581,17 @@ function ClassicV2Version() {
                 onDrop={(e) => {
                   e.preventDefault();
                   setIsDragging(false);
-                  if (e.dataTransfer.files[0])
+                  if (e.dataTransfer.files[0]) {
+                    trackEvent("classic_v2_photo_dropped");
                     readFile(e.dataTransfer.files[0]);
+                  }
                 }}
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  trackEvent("classic_v2_photo_picker_opened", {
+                    has_existing_photo: !!uploadedImage,
+                  });
+                  fileInputRef.current?.click();
+                }}
               >
                 {uploadedImage ? (
                   <img
@@ -1536,11 +1620,15 @@ function ClassicV2Version() {
               <input
                 type="text"
                 value={characterName}
-                onChange={(e) =>
+                onChange={(e) => {
+                  if (!trackedNameInputRef.current) {
+                    trackedNameInputRef.current = true;
+                    trackEvent("classic_v2_name_input_started");
+                  }
                   setCharacterName(
                     e.target.value.replace(NAME_FILTER, "").slice(0, 6),
-                  )
-                }
+                  );
+                }}
                 maxLength={6}
                 placeholder="이름을 입력해주세요 (최대 6글자)"
                 className="mt-4 h-[48px] w-[240px] rounded-[12px] bg-white px-4 text-[14px] tracking-[0.84px] text-[#32322d] placeholder:text-[11px] placeholder:tracking-[0.1px] placeholder:text-[#a4a499] focus:outline-none focus:ring-2 focus:ring-[#628d38]"
@@ -1689,9 +1777,21 @@ function EarlyRegistrationDialog({
         ? `${digits.slice(0, 3)}-${digits.slice(3)}`
         : `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
   const canSubmit = digits.length === 11 && required;
+
+  useEffect(() => {
+    trackEvent("registration_dialog_viewed");
+  }, []);
+
+  useEffect(() => {
+    trackEvent("registration_dialog_section_viewed", {
+      section: view,
+    });
+  }, [view]);
+
   const handleSubmit = useCallback(async () => {
     if (!canSubmit || isSubmitting) return;
 
+    trackEvent("registration_submit_started");
     setRegistrationError("");
     setIsSubmitting(true);
 
@@ -1724,8 +1824,13 @@ function EarlyRegistrationDialog({
         throw new Error("사전예약 API 응답이 올바르지 않아요.");
       }
 
+      trackEvent("registration_submit_completed");
       onComplete();
     } catch (error) {
+      trackEvent("registration_submit_failed", {
+        message:
+          error instanceof Error ? error.message : "unknown_error",
+      });
       setRegistrationError(
         error instanceof Error
           ? error.message
@@ -1769,14 +1874,24 @@ function EarlyRegistrationDialog({
     <div
       className="fixed inset-0 z-[210] flex items-center justify-center bg-black/70 px-4"
       onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) {
+          trackEvent("registration_dialog_closed", {
+            method: "backdrop",
+          });
+          onClose();
+        }
       }}
     >
       <div className="max-h-[calc(100dvh-32px)] w-full max-w-[360px] overflow-y-auto rounded-[16px] border-2 border-[#cdb792] bg-[#faf5eb] px-6 pb-6 pt-5 shadow-2xl">
         <div className="relative text-center">
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => {
+              trackEvent("registration_dialog_closed", {
+                method: "button",
+              });
+              onClose();
+            }}
             className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center text-[18px] text-[#8f7755]"
             aria-label="닫기"
           >
@@ -1836,7 +1951,14 @@ function EarlyRegistrationDialog({
               <div className="flex items-center gap-3 text-left">
                 <button
                   type="button"
-                  onClick={() => setRequired((value) => !value)}
+                  onClick={() =>
+                    setRequired((value) => {
+                      trackEvent("registration_required_consent_toggled", {
+                        checked: !value,
+                      });
+                      return !value;
+                    })
+                  }
                   className="flex flex-1 items-center gap-3 text-left"
                 >
                   <span
@@ -1857,7 +1979,10 @@ function EarlyRegistrationDialog({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setView("terms")}
+                  onClick={() => {
+                    trackEvent("registration_terms_opened");
+                    setView("terms");
+                  }}
                   className="h-7 rounded-[5px] border border-[#cdb792] bg-[#fffdf8] px-2 text-[10px] tracking-[0.4px] text-[#68553e]"
                   style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
                 >
@@ -1917,7 +2042,10 @@ function EarlyRegistrationDialog({
 
             <button
               type="button"
-              onClick={() => setView("form")}
+              onClick={() => {
+                trackEvent("registration_terms_confirmed");
+                setView("form");
+              }}
               className="mt-5 flex h-[48px] w-full items-center justify-center rounded-[12px] bg-[#628d38] text-[15px] tracking-[1.2px] text-white"
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
             >
@@ -1944,9 +2072,20 @@ function CTAPage({
   const [showDialog, setShowDialog] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
+  useEffect(() => {
+    trackEvent("cta_page_viewed", {
+      has_character_name: !!characterName,
+      has_ai_image: !!aiImage,
+    });
+  }, [aiImage, characterName]);
+
   const handleShare = async () => {
+    trackEvent("cta_share_clicked");
     if (await copyShareLink(createCtaShareLink(characterName, aiImage))) {
+      trackEvent("cta_share_copied");
       setShowToast(true);
+    } else {
+      trackEvent("cta_share_failed");
     }
   };
 
@@ -2020,7 +2159,13 @@ function CTAPage({
               )}
             </div>
 
-            <PixelButton onClick={() => setShowDialog(true)} showPaw>
+            <PixelButton
+              onClick={() => {
+                trackEvent("cta_registration_open_clicked");
+                setShowDialog(true);
+              }}
+              showPaw
+            >
               <span
                 className="w-full text-center text-[16px] tracking-[1.6px] text-white"
                 style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
@@ -2034,7 +2179,10 @@ function CTAPage({
             </PixelButton>
             <button
               type="button"
-              onClick={onBack}
+              onClick={() => {
+                trackEvent("cta_back_to_result_clicked");
+                onBack();
+              }}
               className="text-[10px] tracking-[0.4px] text-[#6a6a61]"
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
             >
@@ -2052,6 +2200,7 @@ function CTAPage({
         <EarlyRegistrationDialog
           onClose={() => setShowDialog(false)}
           onComplete={() => {
+            trackEvent("cta_registration_completed");
             setShowDialog(false);
             onComplete();
           }}
@@ -2069,10 +2218,18 @@ function CompletePage({
   shareUrl: string;
 }) {
   const [showToast, setShowToast] = useState(false);
+  useEffect(() => {
+    trackEvent("registration_complete_page_viewed");
+  }, []);
+
   const handleShare = async () => {
+    trackEvent("registration_complete_share_clicked");
     if (await copyShareLink(shareUrl)) {
+      trackEvent("registration_complete_share_copied");
       setShowToast(true);
       onShareAgain();
+    } else {
+      trackEvent("registration_complete_share_failed");
     }
   };
 
