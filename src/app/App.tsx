@@ -48,12 +48,42 @@ const ACCEPTED_TYPES = new Set([
 const MAX_UPLOAD_IMAGE_DIMENSION = 1280;
 const UPLOAD_IMAGE_QUALITY = 0.82;
 const NAME_FILTER = /[^ㄱ-ㅎ가-힣a-zA-Z0-9\s]/g;
+const SHARE_BUTTON_FRAME_FILTER =
+  "brightness(0) saturate(100%) invert(88%) sepia(13%) saturate(418%) hue-rotate(356deg) brightness(95%) contrast(88%)";
 
 type GeneratedCardAssets = {
   cardImage: string;
   cardBackImage: string;
   aiImage: string;
 };
+
+function formatApiErrorPayload(payload: unknown) {
+  if (!payload || typeof payload !== "object") {
+    return String(payload ?? "");
+  }
+
+  const record = payload as Record<string, unknown>;
+  const hasStandardErrorShape =
+    "timestamp" in record ||
+    "status" in record ||
+    "code" in record ||
+    "message" in record;
+
+  if (!hasStandardErrorShape) {
+    return JSON.stringify(payload, null, 2);
+  }
+
+  return JSON.stringify(
+    {
+      timestamp: record.timestamp,
+      status: record.status,
+      code: record.code,
+      message: record.message,
+    },
+    null,
+    2,
+  );
+}
 
 const FALLBACK_CARD_ASSETS: GeneratedCardAssets = {
   cardImage: imgCharFront,
@@ -236,7 +266,7 @@ async function createUploadPreview(file: File) {
 function PawMark({ color }: { color: string }) {
   return (
     <span
-      className="pointer-events-none absolute right-[22px] top-1/2 h-[18px] w-[18px] -translate-y-1/2"
+      className="pointer-events-none absolute right-[30px] top-1/2 z-[3] h-[18px] w-[18px] -translate-y-1/2"
       aria-hidden="true"
       style={{
         backgroundColor: color,
@@ -260,6 +290,8 @@ function PixelCreamFrame({
   disabled = false,
   onClick,
   role,
+  borderColor = "#8f7755",
+  borderWidth = 2,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -267,6 +299,8 @@ function PixelCreamFrame({
   disabled?: boolean;
   onClick?: () => void;
   role?: string;
+  borderColor?: string;
+  borderWidth?: number;
 }) {
   return (
     <div
@@ -274,7 +308,7 @@ function PixelCreamFrame({
       className={`relative ${className}`}
       style={{
         height,
-        background: "#8f7755",
+        background: borderColor,
         clipPath:
           "polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px)",
         cursor: disabled ? "not-allowed" : onClick ? "pointer" : "default",
@@ -284,8 +318,9 @@ function PixelCreamFrame({
       aria-disabled={disabled || undefined}
     >
       <div
-        className="absolute inset-[2px]"
+        className="absolute"
         style={{
+          inset: borderWidth,
           background: "#faf5eb",
           clipPath:
             "polygon(3px 0, calc(100% - 3px) 0, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0 calc(100% - 3px), 0 3px)",
@@ -293,7 +328,10 @@ function PixelCreamFrame({
       />
       <div
         className="absolute bottom-[3px] left-[7px] right-[7px] h-[4px]"
-        style={{ background: "#e9dfc8" }}
+        style={{
+          background: "#e9dfc8",
+          display: borderWidth === 1 && borderColor === "#000000" ? "none" : undefined,
+        }}
       />
       <div className="relative z-10 flex h-full w-full items-center justify-center">
         {children}
@@ -308,128 +346,181 @@ function PixelButton({
   children,
   variant = "primary",
   showPaw = false,
+  frameFilter,
+  centerColor,
+  textColor,
+  pawColor,
 }: {
   onClick?: () => void;
   disabled?: boolean;
   children: React.ReactNode;
   variant?: "primary" | "secondary";
   showPaw?: boolean;
+  frameFilter?: string;
+  centerColor?: string;
+  textColor?: string;
+  pawColor?: string;
 }) {
   const isSecondary = variant === "secondary";
+  const resolvedFrameFilter = frameFilter ?? (isSecondary
+    ? "brightness(0) saturate(100%)"
+    : undefined);
+  const centerBg = centerColor ?? (isSecondary ? "#faf5eb" : "#36501e");
+  const resolvedTextColor = textColor ?? (isSecondary ? "#68553e" : "white");
+  const resolvedPawColor = pawColor ?? (isSecondary ? "#e3d5bd" : "#78985a");
+  const frameSize = "12px";
+  const gridTemplate = `${frameSize} 1fr ${frameSize}`;
 
   if (isSecondary) {
     return (
-      <PixelCreamFrame
-        className="w-[280px] transition-opacity"
-        disabled={disabled}
-        onClick={onClick}
-        role="button"
+      <div
+        onClick={disabled ? undefined : onClick}
+        className="relative h-[60px] w-[284px] transition-opacity"
+        style={{
+          background: "#DCCCAE",
+          clipPath:
+            "polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px)",
+          cursor: disabled ? "not-allowed" : "pointer",
+          opacity: disabled ? 0.4 : 1,
+        }}
       >
-        <div className="relative flex h-full w-full items-center justify-center text-center text-[16px] tracking-[1.2px] text-[#68553e]">
-          <div
-            className="flex h-full w-full items-center justify-center text-center"
-            style={{
-              fontFamily: "Elice DX Neolli",
-              fontWeight: 500,
-            }}
-          >
-            {children}
-          </div>
-          {showPaw && <PawMark color="#e3d5bd" />}
-        </div>
-      </PixelCreamFrame>
-    );
-  }
-
-  return (
-    <div
-      onClick={disabled ? undefined : onClick}
-      className="grid w-[280px] h-[60px] transition-opacity"
-      style={{
-        gridTemplateColumns: "12px 1fr 12px",
-        gridTemplateRows: "12px 1fr 12px",
-        opacity: disabled ? 0.4 : 1,
-        cursor: disabled ? "not-allowed" : "pointer",
-      }}
-    >
-      <div className="overflow-clip relative size-[12px]">
-        <img
-          src={imgCornerTL}
-          alt=""
-          className="absolute inset-0 size-full object-cover pointer-events-none"
-        />
-      </div>
-      <div
-        className="overflow-clip relative h-[12px]"
-        style={{
-          backgroundImage: `url("${imgEdgeTop}")`,
-          backgroundSize: "12px 12px",
-          backgroundPosition: "top left",
-        }}
-      />
-      <div className="overflow-clip relative size-[12px]">
-        <img
-          src={imgCornerTR}
-          alt=""
-          className="absolute inset-0 size-full object-cover pointer-events-none"
-        />
-      </div>
-      <div
-        className="overflow-clip relative w-[12px]"
-        style={{
-          backgroundImage: `url("${imgEdgeLeft}")`,
-          backgroundSize: "12px 12px",
-          backgroundPosition: "top left",
-        }}
-      />
-      <div className="relative flex items-center justify-center bg-[#36501e]">
         <div
-          className="flex h-full w-full items-center justify-center text-center text-[16px] tracking-[1.2px] text-white"
+          className="absolute inset-0"
           style={{
+            background: "#DCCCAE",
+            clipPath:
+              "polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px)",
+          }}
+        />
+        <div
+          className="absolute bottom-[3px] left-[2px] right-[2px] top-[2px]"
+          style={{
+            background: "#FAF5EB",
+            clipPath:
+              "polygon(3px 0, calc(100% - 3px) 0, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0 calc(100% - 3px), 0 3px)",
+          }}
+        />
+        <div
+          className="relative z-[2] flex h-full w-full items-center justify-center text-center text-[16px] tracking-[1.2px]"
+          style={{
+            color: "#68553E",
             fontFamily: "Elice DX Neolli",
             fontWeight: 500,
           }}
         >
           {children}
         </div>
-        {showPaw && <PawMark color="#78985a" />}
+        {showPaw && <PawMark color="#DCCCAE" />}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={disabled ? undefined : onClick}
+      className="relative grid w-[280px] h-[60px] transition-opacity"
+      style={{
+        gridTemplateColumns: gridTemplate,
+        gridTemplateRows: gridTemplate,
+        opacity: disabled ? 0.4 : 1,
+        cursor: disabled ? "not-allowed" : "pointer",
+      }}
+    >
+      <div className="overflow-clip relative" style={{ width: frameSize, height: frameSize }}>
+        <img
+          src={imgCornerTL}
+          alt=""
+          className="absolute inset-0 size-full object-cover pointer-events-none"
+          style={{ filter: resolvedFrameFilter }}
+        />
       </div>
       <div
-        className="overflow-clip relative w-[12px]"
+        className="overflow-clip relative"
         style={{
-          backgroundImage: `url("${imgEdgeLeft}")`,
-          backgroundSize: "12px 12px",
+          height: frameSize,
+          backgroundImage: `url("${imgEdgeTop}")`,
+          backgroundSize: `${frameSize} ${frameSize}`,
           backgroundPosition: "top left",
-          transform: "scaleY(-1) rotate(180deg)",
+          filter: resolvedFrameFilter,
         }}
       />
-      <div className="overflow-clip relative size-[12px]">
+      <div className="overflow-clip relative" style={{ width: frameSize, height: frameSize }}>
+        <img
+          src={imgCornerTR}
+          alt=""
+          className="absolute inset-0 size-full object-cover pointer-events-none"
+          style={{ filter: resolvedFrameFilter }}
+        />
+      </div>
+      <div
+        className="overflow-clip relative"
+        style={{
+          width: frameSize,
+          backgroundImage: `url("${imgEdgeLeft}")`,
+          backgroundSize: `${frameSize} ${frameSize}`,
+          backgroundPosition: "top left",
+          filter: resolvedFrameFilter,
+        }}
+      />
+      <div
+        className="relative z-[2] flex items-center justify-center"
+        style={{ background: centerBg }}
+      >
+        <div
+          className="flex h-full w-full items-center justify-center text-center text-[16px] tracking-[1.2px]"
+          style={{
+            fontFamily: "Elice DX Neolli",
+            fontWeight: 500,
+            color: resolvedTextColor,
+          }}
+        >
+          {children}
+        </div>
+      </div>
+      <div
+        className="overflow-clip relative"
+        style={{
+          width: frameSize,
+          backgroundImage: `url("${imgEdgeLeft}")`,
+          backgroundSize: `${frameSize} ${frameSize}`,
+          backgroundPosition: "top left",
+          transform: "scaleY(-1) rotate(180deg)",
+          filter: resolvedFrameFilter,
+        }}
+      />
+      <div className="overflow-clip relative" style={{ width: frameSize, height: frameSize }}>
         <img
           src={imgCornerBLb}
           alt=""
           className="absolute inset-0 size-full object-cover pointer-events-none"
+          style={{ filter: resolvedFrameFilter }}
         />
         <img
           src={imgCornerBLa}
           alt=""
           className="absolute inset-0 size-full object-cover pointer-events-none"
+          style={{ filter: resolvedFrameFilter }}
         />
       </div>
       <div
-        className="overflow-clip relative h-[12px]"
+        className="overflow-clip relative"
         style={{
+          height: frameSize,
           backgroundImage: `url("${imgEdgeBot}")`,
-          backgroundSize: "12px 12px",
+          backgroundSize: `${frameSize} ${frameSize}`,
           backgroundPosition: "top left",
+          filter: resolvedFrameFilter,
         }}
       />
-      <div className="overflow-clip relative size-[12px]">
+      <div className="overflow-clip relative" style={{ width: frameSize, height: frameSize }}>
         <img
           src={imgCornerBR}
           alt=""
           className="absolute inset-0 size-full object-cover pointer-events-none"
+          style={{ filter: resolvedFrameFilter }}
         />
       </div>
+      {showPaw && <PawMark color={resolvedPawColor} />}
     </div>
   );
 }
@@ -537,7 +628,13 @@ function AnimatedPanel({
   );
 }
 
-function OnboardingCarousel({ initialSlide = 0 }: { initialSlide?: number }) {
+function OnboardingCarousel({
+  initialSlide = 0,
+  className = "mt-4",
+}: {
+  initialSlide?: number;
+  className?: string;
+}) {
   const [activeSlide, setActiveSlide] = useState(initialSlide);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -580,7 +677,7 @@ function OnboardingCarousel({ initialSlide = 0 }: { initialSlide?: number }) {
       <div
         ref={scrollerRef}
         onScroll={handleScroll}
-        className="mt-4 flex h-[236px] w-full snap-x snap-mandatory overflow-x-auto scroll-smooth"
+        className={`${className} mx-auto flex h-[291px] w-[264px] snap-x snap-mandatory overflow-x-auto scroll-smooth`}
         style={{
           scrollbarWidth: "none",
           WebkitOverflowScrolling: "touch",
@@ -645,39 +742,11 @@ function ProcessingPanel() {
     return () => cancelAnimationFrame(rafId);
   }, []);
 
-  const loadingStep =
-    progress < 0.3
-      ? {
-          percent: 30,
-          label: "ANALIZING...",
-          title: "동물을 분석하고 있어요",
-          description: "사진 속 특징을 읽고 카드에 어울리는 형태를 찾는 중이에요",
-        }
-      : progress < 0.62
-        ? {
-            percent: 62,
-            label: "PIXELING...",
-            title: "픽셀 캐릭터를 만들고 있어요",
-            description: "배경을 정리하고 귀여운 픽셀 스타일로 바꾸는 중이에요",
-          }
-        : progress < 0.86
-          ? {
-              percent: 86,
-              label: "PACKING...",
-              title: "카드팩에 담고 있어요",
-              description: "이름과 이미지를 조합해서 나만의 카드를 준비하고 있어요",
-            }
-          : {
-              percent: 95,
-              label: "FINISHING...",
-              title: "마지막 손질 중이에요",
-              description: "곧 완성된 카드팩을 열어볼 수 있어요",
-            };
   const loadingPercent = Math.min(95, Math.round(progress * 100));
 
   return (
     <WindowPanel>
-      <div className="flex min-h-[590px] flex-col items-center justify-center px-6 py-5">
+      <div className="flex min-h-[590px] flex-col items-center px-6 pb-5 pt-0">
         <div className="flex w-full flex-col items-center">
           <div
             className="relative flex h-[82px] w-[92px] items-center justify-center"
@@ -717,38 +786,36 @@ function ProcessingPanel() {
           </div>
 
           <p
-            className="mt-1 text-center text-[10px] tracking-[1.1px] text-[#628d38]"
+            className="mt-[19.94px] text-center text-[10px] tracking-[1.1px] text-[#628d38]"
             style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
           >
-            {loadingStep.label}
+            ANALIZING...
           </p>
           <p
-            className="mt-2 text-center text-[18px] leading-[1.35] tracking-[0.7px] text-[#32322d]"
+            className="mt-[6.35px] text-center text-[18px] leading-[1.35] tracking-[0.7px] text-[#32322d]"
             style={{
               fontFamily: "Elice DX Neolli",
               fontWeight: 500,
             }}
           >
-            {loadingStep.title}
+            동물을 분석하고 있어요
           </p>
-          <p
-            className="mt-3 min-h-[48px] px-3 text-center text-[10px] leading-[1.65] tracking-[0.35px] text-[#8f7755]"
+          <div
+            className="mt-[19.94px] flex min-h-[48px] flex-col items-center gap-[9.61px] px-3 text-center text-[10px] leading-none tracking-[0.35px] text-[#8f7755]"
             style={{
               fontFamily: "Elice DX Neolli",
               fontWeight: 300,
             }}
           >
-            실제 앱에서는 더 빠르고 재밌있게
-            <br />
-            포착할 수 있는 기능들을 만나볼 수 있어요
-            <br />
-            <span className="text-[9px] text-[#c0ad8e]">
-              *웹사이트를 홍보용으로 제작된 화면이에요
+            <p className="text-[10px] text-[#6A6A61]">실제 앱에서는 더 빠르고 재밌있게</p>
+            <p className="text-[10px] text-[#6A6A61]">포착할 수 있는 기능들을 만나볼 수 있어요</p>
+            <span className="text-[8px] text-[#BFBFB6]">
+              *웹사이트를 종료하더라도 변환은 유지돼요
             </span>
-          </p>
+          </div>
         </div>
 
-        <OnboardingCarousel />
+        <OnboardingCarousel className="mt-[33.81px]" />
       </div>
     </WindowPanel>
   );
@@ -818,10 +885,10 @@ function PixelGeneratingModal() {
 function CardPackPanel({ onOpen }: { onOpen: () => void }) {
   return (
     <WindowPanel>
-      <div className="flex min-h-[590px] flex-col items-center justify-center px-6 py-5">
+      <div className="flex min-h-[590px] flex-col items-center px-6 pb-5 pt-0">
         <div className="flex w-full flex-col items-center">
           <p
-            className="text-center text-[18px] tracking-[1.4px] text-[#628d38]"
+            className="text-center text-[13px] tracking-[1.4px] text-[#628d38]"
             style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
           >
             CARD PACK READY!
@@ -950,7 +1017,7 @@ function PackOpeningOverlay({
       {!showResult ? (
         <div
           className="relative flex items-center justify-center"
-          style={{ width: "280px", height: "400px" }}
+          style={{ width: "330px", height: "430px" }}
         >
           {/* Card back — peeks, shoots up, lands large */}
           <div
@@ -976,7 +1043,7 @@ function PackOpeningOverlay({
           <div
             className="absolute z-10"
             style={{
-              top: "80px",
+              top: "14px",
               transition:
                 "transform 0.7s cubic-bezier(0.34,1.56,0.64,1), opacity 0.5s ease",
               transform: cut
@@ -985,12 +1052,12 @@ function PackOpeningOverlay({
               opacity: packGone ? 0 : 1,
             }}
           >
-            <div style={{ overflow: "hidden", height: "48px" }}>
+            <div style={{ overflow: "hidden", height: "108px" }}>
               <img
                 src={imgCardPack}
                 alt=""
                 className="drop-shadow-2xl"
-                style={{ width: "180px" }}
+                style={{ width: "298.36px", height: "402.23px" }}
               />
             </div>
           </div>
@@ -999,7 +1066,7 @@ function PackOpeningOverlay({
           <div
             className="absolute z-10"
             style={{
-              bottom: "60px",
+              bottom: "14px",
               transition:
                 "transform 0.7s cubic-bezier(0.34,1.56,0.64,1), opacity 0.5s ease",
               transform: cut
@@ -1011,15 +1078,19 @@ function PackOpeningOverlay({
             <div
               style={{
                 overflow: "hidden",
-                height: "212px",
-                marginTop: "-48px",
+                height: "294.23px",
+                marginTop: "-108px",
               }}
             >
               <img
                 src={imgCardPack}
                 alt=""
                 className="drop-shadow-2xl"
-                style={{ width: "180px", marginTop: "-48px" }}
+                style={{
+                  width: "298.36px",
+                  height: "402.23px",
+                  marginTop: "-108px",
+                }}
               />
             </div>
           </div>
@@ -1170,7 +1241,7 @@ function ResultOverlay({
   }, [assets.aiImage, characterName]);
 
   return (
-    <div className="flex flex-col items-center w-full px-6 gap-6">
+    <div className="absolute left-0 right-0 top-[93.19px] flex flex-col items-center w-full px-6">
       {onRegister && (
         <button
           type="button"
@@ -1178,7 +1249,7 @@ function ResultOverlay({
             trackEvent("classic_v2_cta_opened_from_result");
             onRegister();
           }}
-          className="absolute right-5 top-8 z-20 flex h-9 w-9 items-center justify-center text-[26px] leading-none text-white/95"
+          className="fixed right-5 top-8 z-20 flex h-9 w-9 items-center justify-center text-[26px] leading-none text-white/95"
           style={{
             fontFamily: "Galmuri11",
             fontWeight: 700,
@@ -1216,7 +1287,8 @@ function ResultOverlay({
         <div
           style={{
             position: "relative",
-            width: "220px",
+            width: "283.66px",
+            height: "408.52px",
             transformStyle: "preserve-3d",
             transform: `rotateY(${angle}deg)`,
             // CSS transition only during the initial flip; removed once spinning starts
@@ -1238,10 +1310,12 @@ function ResultOverlay({
               alt="캐릭터 카드"
               draggable={false}
               style={{
-                width: "220px",
+                width: "283.66px",
+                height: "408.52px",
                 filter:
                   "drop-shadow(0 12px 32px rgba(0,0,0,0.7))",
                 display: "block",
+                objectFit: "contain",
                 pointerEvents: "none",
               }}
             />
@@ -1262,10 +1336,12 @@ function ResultOverlay({
               alt="카드 뒷면"
               draggable={false}
               style={{
-                width: "220px",
+                width: "283.66px",
+                height: "408.52px",
                 filter:
                   "drop-shadow(0 12px 32px rgba(0,0,0,0.7))",
                 display: "block",
+                objectFit: "contain",
                 pointerEvents: "none",
               }}
             />
@@ -1273,37 +1349,31 @@ function ResultOverlay({
         </div>
       </div>
 
-      <p
-        className="relative text-white/70 text-[16px] pt-[24px] tracking-[0.4px] text-center"
-        style={{
-          fontFamily: "Elice DX Neolli",
-          fontWeight: 300,
-        }}
-      >
-        야생의 {characterName}(이)가 나타났다!!
-      </p>
-
-      <PixelButton onClick={handleSave} showPaw>
-        <span
-          className="text-[14px] tracking-[1.4px] text-white text-center w-full"
-          style={{
-            fontFamily: "Elice DX Neolli",
-            fontWeight: 500,
-          }}
-        >
-          이미지 저장
-        </span>
-      </PixelButton>
-
-      {onRegister && (
-        <PixelButton
-          onClick={handleShare}
-          variant="secondary"
-          showPaw
-        >
-          친구에게 공유하기
+      <div className="mt-[65.35px] flex flex-col items-center gap-[6px]">
+        <PixelButton onClick={handleSave} showPaw>
+          <span
+            className="text-[16px] tracking-[1.4px] text-white text-center w-full"
+            style={{
+              fontFamily: "Elice DX Neolli",
+              fontWeight: 500,
+            }}
+          >
+            이미지 저장
+          </span>
         </PixelButton>
-      )}
+
+        {onRegister && (
+          <div className="pb-[2px]">
+          <PixelButton
+            onClick={handleShare}
+            variant="secondary"
+            showPaw
+          >
+            친구에게 공유하기
+          </PixelButton>
+          </div>
+        )}
+      </div>
       <ToastNotification
         visible={showToast}
         onHidden={() => setShowToast(false)}
@@ -1417,9 +1487,21 @@ function ClassicV2Version() {
       });
       const payload = await response.json();
       if (!response.ok) {
-        throw new Error(
-          payload.error || "카드 이미지를 만들지 못했어요.",
-        );
+        const apiErrorMessage = formatApiErrorPayload(payload);
+        trackEvent("classic_v2_convert_failed", {
+          message: apiErrorMessage,
+          status:
+            payload && typeof payload === "object" && "status" in payload
+              ? String((payload as Record<string, unknown>).status)
+              : String(response.status),
+          code:
+            payload && typeof payload === "object" && "code" in payload
+              ? String((payload as Record<string, unknown>).code)
+              : "unknown",
+        });
+        setGenerationError(apiErrorMessage);
+        setPhase("idle");
+        return;
       }
       setGeneratedAssets({
         cardImage:
@@ -1512,44 +1594,54 @@ function ClassicV2Version() {
       />
 
       <main className="relative flex min-h-[100dvh] w-full max-w-[360px] flex-col justify-center px-[14px] pb-4 pt-[44px]">
-        <div className="mb-2 flex justify-center gap-2">
-          {[1, 2, 3].map((step) => (
-            <div
-              key={step}
-              className={`h-[8px] rounded-full transition-all ${
-                step === stepIndex
-                  ? "w-[38px] bg-[#f2ebdd]"
-                  : "w-[18px] bg-[#36501e]/45"
-              }`}
-            />
-          ))}
-        </div>
+        {phase !== "idle" && (
+          <div className="mb-2 flex justify-center gap-2">
+            {[1, 2, 3].map((step) => (
+              <div
+                key={step}
+                className={`h-[8px] rounded-full transition-all ${
+                  step === stepIndex
+                    ? "w-[38px] bg-[#f2ebdd]"
+                    : "w-[18px] bg-[#36501e]/45"
+                }`}
+              />
+            ))}
+          </div>
+        )}
 
         {phase === "idle" && (
-          <WindowPanel>
-            <div className="flex min-h-[590px] flex-col items-center justify-center px-8 py-4">
-              <p
-                className="mb-2 text-center text-[18px] leading-[1.35] tracking-[0.9px] text-[#32322d]"
-                style={{
-                  fontFamily: "Elice DX Neolli",
-                  fontWeight: 500,
-                }}
-              >
-                동물 사진과 이름으로
-                <br />
-                카드팩을 열어보세요
-              </p>
-              <p
-                className="mb-4 text-center text-[10px] leading-[1.6] tracking-[0.4px] text-[#6a6a61]"
+          <div className="mx-auto w-[330.944px] max-w-full">
+            <WindowPanel>
+            <div className="flex h-[739px] flex-col items-center px-[25px] pt-0">
+              <div className="flex flex-col items-center gap-[14px]">
+                <p
+                  className="h-[13px] w-[53px] whitespace-nowrap text-center text-[13px] leading-[13px] tracking-[1.3px] text-[#628d38]"
+                  style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
+                >
+                  STEP 01
+                </p>
+                <p
+                  className="flex h-[50px] w-[224px] items-center justify-center text-center text-[17px] leading-[1.4] tracking-[0.9px] text-[#32322d]"
+                  style={{
+                    fontFamily: "Elice DX Neolli",
+                    fontWeight: 500,
+                  }}
+                >
+                  동물 사진을 업로드하면
+                  <br />
+                  캐릭터 카드를 발급해드려요
+                </p>
+              </div>
+              <div
+                className="mt-[20.4px] flex flex-col items-center gap-[9.61px] text-center text-[10px] leading-none tracking-[0.35px] text-[#6a6a61]"
                 style={{
                   fontFamily: "Elice DX Neolli",
                   fontWeight: 300,
                 }}
               >
-                스크롤 없이 한 화면에서
-                <br />
-                단계별로 진행돼요
-              </p>
+                <p>최대한 얼굴과 몸이 잘 나온 사진을 올려주세요</p>
+                <p>저작권에 문제 없는 이미지를 사용해주세요</p>
+              </div>
 
               <input
                 ref={fileInputRef}
@@ -1566,7 +1658,7 @@ function ClassicV2Version() {
 
               <button
                 type="button"
-                className="relative h-[180px] w-[240px] overflow-hidden rounded-[4px]"
+                className="relative mt-[27.3px] h-[240px] w-[240px] overflow-hidden rounded-[4px]"
                 style={{
                   background: "#f2ebdd",
                   border: isDragging
@@ -1613,9 +1705,49 @@ function ClassicV2Version() {
                       <br />
                       이미지 파일을 선택하세요
                     </span>
+                    <span className="text-[9px] leading-none tracking-[0.25px] text-[#c6b99f]">
+                      JPG, PNG, HEIC 파일 지원
+                    </span>
                   </span>
                 )}
               </button>
+
+              <div className="my-[30px] flex w-full justify-center gap-[16px]">
+                {Array.from({ length: 9 }).map((_, index) => (
+                  <span
+                    key={index}
+                    className="h-px w-[10px] bg-[#e4d8c2]"
+                    aria-hidden="true"
+                  />
+                ))}
+              </div>
+
+              <p
+                className="h-[13px] w-[53px] whitespace-nowrap text-center text-[13px] leading-[13px] tracking-[1.3px] text-[#628d38]"
+                style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
+              >
+                STEP 02
+              </p>
+              <p
+                className="mt-[14px] text-center text-[18px] leading-[1.4] tracking-[0.9px] text-[#32322d]"
+                style={{
+                  fontFamily: "Elice DX Neolli",
+                  fontWeight: 500,
+                }}
+              >
+                이 캐릭터의 이름을
+                <br />
+                작성해주세요
+              </p>
+              <p
+                className="mt-5 text-center text-[10px] leading-[1.6] tracking-[0.35px] text-[#6a6a61]"
+                style={{
+                  fontFamily: "Elice DX Neolli",
+                  fontWeight: 300,
+                }}
+              >
+                아쉽게도 특수문자는 사용할 수 없어요
+              </p>
 
               <input
                 type="text"
@@ -1630,16 +1762,17 @@ function ClassicV2Version() {
                   );
                 }}
                 maxLength={6}
-                placeholder="이름을 입력해주세요 (최대 6글자)"
-                className="mt-4 h-[48px] w-[240px] rounded-[12px] bg-white px-4 text-[14px] tracking-[0.84px] text-[#32322d] placeholder:text-[11px] placeholder:tracking-[0.1px] placeholder:text-[#a4a499] focus:outline-none focus:ring-2 focus:ring-[#628d38]"
+                placeholder="이름을 작성해주세요"
+                className="mt-[22px] h-[56px] w-[250px] rounded-[12px] bg-white px-4 text-[15px] tracking-[0.4px] text-[#32322d] placeholder:text-[14px] placeholder:tracking-[0.2px] placeholder:text-[#c9c2b4] focus:outline-none focus:ring-2 focus:ring-[#628d38]"
                 style={{
                   fontFamily: "Elice DX Neolli",
                   fontWeight: 300,
-                  border: "1px solid #e9dfc8",
+                  border: "1px solid #e5dece",
+                  boxShadow: "0 2px 6px rgba(104,85,62,0.06)",
                 }}
               />
 
-              <div className="mt-4">
+              <div className="mt-[22px]">
                 <PixelButton
                   onClick={handleConvert}
                   disabled={!isButtonActive}
@@ -1657,18 +1790,19 @@ function ClassicV2Version() {
                 </PixelButton>
               </div>
               {generationError && (
-                <p
-                  className="mt-3 min-h-[18px] text-center text-[10px] leading-[1.5] tracking-[0.3px] text-[#c84f3d]"
+                <pre
+                  className="mt-3 min-h-[18px] max-w-[280px] whitespace-pre-wrap break-words text-center text-[10px] leading-[1.5] tracking-[0.3px] text-[#c84f3d]"
                   style={{
                     fontFamily: "Elice DX Neolli",
                     fontWeight: 300,
                   }}
                 >
                   {generationError}
-                </p>
+                </pre>
               )}
             </div>
           </WindowPanel>
+          </div>
         )}
 
         {phase === "processing" && (
@@ -1948,7 +2082,7 @@ function EarlyRegistrationDialog({
             )}
 
             <div className="mt-4 flex flex-col gap-3">
-              <div className="flex items-center gap-3 text-left">
+              <div className="flex flex-col items-center gap-3 text-left">
                 <button
                   type="button"
                   onClick={() =>
@@ -1959,7 +2093,7 @@ function EarlyRegistrationDialog({
                       return !value;
                     })
                   }
-                  className="flex flex-1 items-center gap-3 text-left"
+                  className="flex h-[60px] w-[280px] items-center gap-3 rounded-[8px] border border-[#cdb792] bg-[#fffdf8] px-4 text-left"
                 >
                   <span
                     className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[4px] border-2 text-[12px] text-white"
@@ -1983,7 +2117,7 @@ function EarlyRegistrationDialog({
                     trackEvent("registration_terms_opened");
                     setView("terms");
                   }}
-                  className="h-7 rounded-[5px] border border-[#cdb792] bg-[#fffdf8] px-2 text-[10px] tracking-[0.4px] text-[#68553e]"
+                  className="flex h-[60px] w-[280px] shrink-0 items-center justify-center rounded-[8px] border border-[#cdb792] bg-[#fffdf8] text-[15px] tracking-[1.2px] text-[#68553e]"
                   style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
                 >
                   보기
@@ -2046,7 +2180,7 @@ function EarlyRegistrationDialog({
                 trackEvent("registration_terms_confirmed");
                 setView("form");
               }}
-              className="mt-5 flex h-[48px] w-full items-center justify-center rounded-[12px] bg-[#628d38] text-[15px] tracking-[1.2px] text-white"
+              className="mx-auto mt-5 flex h-[60px] w-[280px] items-center justify-center rounded-[12px] bg-[#628d38] text-[15px] tracking-[1.2px] text-white"
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
             >
               확인
@@ -2089,6 +2223,20 @@ function CTAPage({
     }
   };
 
+  const handleImageSave = async () => {
+    trackEvent("cta_image_save_clicked");
+
+    try {
+      await saveCardImage(aiImage || imgCharFront, characterName || "pixel-animal");
+      trackEvent("cta_image_save_completed");
+    } catch (error) {
+      trackEvent("cta_image_save_failed", {
+        message:
+          error instanceof Error ? error.message : "unknown_error",
+      });
+    }
+  };
+
   return (
     <div className="min-h-[100dvh] w-full bg-[#628d38] flex justify-center relative overflow-hidden">
       <style>{KEYFRAMES}</style>
@@ -2103,36 +2251,56 @@ function CTAPage({
       <main className="relative flex min-h-[100dvh] w-full max-w-[360px] flex-col justify-center px-[14px] pb-8 pt-[24px]">
         <WindowPanel>
           <div className="flex flex-col items-center gap-4 px-6 pb-6 pt-[27px]">
-            <p
-              className="text-center text-[18px] leading-[1.4] tracking-[0.9px] text-[#32322d]"
+            <div className="flex h-[80.4px] w-[211px] flex-col items-center justify-start text-center">
+              <p
+                className="text-[17px] leading-[1.4] tracking-[0.9px] text-[#32322d]"
+                style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+              >
+                {characterName || "픽셀 동물"}을
+                <br />
+                농장에 입주시킬 수 있어요
+              </p>
+              <p
+                className="mt-[20.4px] text-[10px] tracking-[0.4px] text-[#6a6a61]"
+                style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
+              >
+                사전등록하면 출시 소식과 보상을 알려드려요
+              </p>
+            </div>
+
+            <div
+              className="relative h-[206px] w-[206px] rotate-[-4deg] rounded-[8px] border border-[#8d8a7d] bg-[#fbfaf3] p-[10px]"
+              style={{
+                boxShadow:
+                  "0 14px 24px rgba(65, 52, 35, 0.18), 0 2px 0 rgba(255,255,255,0.8) inset",
+              }}
+            >
+              <div className="absolute left-1/2 top-[-9px] h-[20px] w-[58px] -translate-x-1/2 rotate-[2deg] bg-[#e9db9f]/70" />
+              <div className="relative h-full w-full overflow-hidden rounded-[4px] border border-[#d2d0c1] bg-[#eef4e4]">
+                {aiImage ? (
+                  <img
+                    src={aiImage}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                ) : (
+                  <img
+                    src={imgCharFront}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleImageSave}
+              className="flex h-[42px] w-[105.15px] items-center justify-center rounded-[8px] border border-[#000000] bg-[#fffdf8] text-[12px] tracking-[0.4px] text-[#32322d]"
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
             >
-              {characterName || "픽셀 동물"}을
-              <br />
-              농장에 입주시킬 수 있어요
-            </p>
-            <p
-              className="text-center text-[10px] tracking-[0.4px] text-[#6a6a61]"
-              style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
-            >
-              사전등록하면 출시 소식과 보상을 알려드려요
-            </p>
-
-            <div className="relative h-[206px] w-[206px] overflow-hidden rounded-[8px] border border-[#a4a499] bg-[#fafaf8] shadow-md">
-              {aiImage ? (
-                <img
-                  src={aiImage}
-                  alt=""
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
-              ) : (
-                <img
-                  src={imgCharFront}
-                  alt=""
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
-              )}
-            </div>
+              이미지 저장
+            </button>
 
             <div className="w-full rounded-[4px] border border-[#cdb792] bg-[#fffdf8] px-3 py-3">
               <p
@@ -2174,20 +2342,13 @@ function CTAPage({
               </span>
             </PixelButton>
 
-            <PixelButton onClick={handleShare} variant="secondary" showPaw>
+            <PixelButton
+              onClick={handleShare}
+              variant="secondary"
+              showPaw
+            >
               친구에게 공유하기
             </PixelButton>
-            <button
-              type="button"
-              onClick={() => {
-                trackEvent("cta_back_to_result_clicked");
-                onBack();
-              }}
-              className="text-[10px] tracking-[0.4px] text-[#6a6a61]"
-              style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
-            >
-              결과 화면으로 돌아가기
-            </button>
           </div>
         </WindowPanel>
       </main>
@@ -2274,7 +2435,11 @@ function CompletePage({
                 </p>
               ))}
             </div>
-            <PixelButton onClick={handleShare} variant="secondary" showPaw>
+            <PixelButton
+              onClick={handleShare}
+              variant="secondary"
+              showPaw
+            >
               친구에게 공유하기
             </PixelButton>
           </div>
