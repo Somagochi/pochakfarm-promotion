@@ -2,15 +2,6 @@
 <html lang="en">
 
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-99J5NT3GZ9"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag() { dataLayer.push(arguments); }
-    gtag('js', new Date());
-
-    gtag('config', 'G-99J5NT3GZ9');
-  </script>
   <!-- Google Tag Manager -->
   <script>(function (w, d, s, l, i) {
       w[l] = w[l] || []; w[l].push({
@@ -19,13 +10,13 @@
       }); var f = d.getElementsByTagName(s)[0],
         j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
           'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
-    })(window, document, 'script', 'dataLayer', 'GTM-MN9KWPN3');</script>
+    })(window, document, 'script', 'dataLayer', '%VITE_GTM_ID%');</script>
   <!-- End Google Tag Manager -->
 
   <meta charset="UTF-8" />
   <link rel="icon" type="image/png" href="./src/assets/ui/nav.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>포착팜 웹페이지 제작</title>
+  <title>포착팜</title>
   <meta name="description"
     content="Delivers a mobile-optimized web page replicating the exact design to enhance user experience and accessibility on smartphones and tablets." />
   <meta name="robots" content="noindex, nofollow" />
@@ -45,7 +36,7 @@
 
 <body>
   <!-- Google Tag Manager (noscript) -->
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MN9KWPN3" height="0" width="0"
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=%VITE_GTM_ID%" height="0" width="0"
       style="display:none;visibility:hidden"></iframe></noscript>
   <!-- End Google Tag Manager (noscript) -->
   <div id="root"></div>

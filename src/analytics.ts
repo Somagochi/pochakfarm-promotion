@@ -21,10 +21,16 @@ export function initAnalytics() {
 
   initialized = true;
 
-  const script = document.createElement("script");
-  script.async = true;
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
-  document.head.appendChild(script);
+  const hasGtagScript = !!document.querySelector(
+    `script[src*="googletagmanager.com/gtag/js?id=${measurementId}"]`,
+  );
+
+  if (!hasGtagScript) {
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
+    document.head.appendChild(script);
+  }
 
   window.dataLayer = window.dataLayer || [];
   window.gtag =
@@ -44,7 +50,7 @@ export function trackEvent(
   name: string,
   params: Record<string, unknown> = {},
 ) {
-  if (!measurementId || !window.gtag) return;
+  if (!window.gtag) return;
 
   window.gtag("event", name, params);
 }
