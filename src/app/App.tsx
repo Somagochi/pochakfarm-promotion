@@ -5,6 +5,9 @@ import {
   useCallback,
 } from "react";
 import { trackEvent } from "../analytics";
+import imgBtnSmall from "../assets/ui/btn-sm.png";
+import imgBtnSmall2 from "../assets/ui/btn-sm-2.png";
+import imgBtnSmall3 from "../assets/ui/btn-sm-3.png";
 import imgBtnContentRight from "../assets/ui/btn-contents-right2.png";
 import imgToastPrimary from "../assets/ui/primary.png";
 
@@ -2016,7 +2019,13 @@ function EarlyRegistrationDialog({
         }
       }}
     >
-      <div className="max-h-[calc(100dvh-32px)] w-full max-w-[360px] overflow-y-auto rounded-[16px] border-2 border-[#cdb792] bg-[#faf5eb] px-6 pb-6 pt-5 shadow-2xl">
+      <div
+        className="relative max-h-[calc(100dvh-32px)] w-[314px] overflow-y-auto rounded-[5px] bg-[#faf5eb] px-[38px] pb-[34px] pt-[30px]"
+        style={{
+          border: "2px solid #1f1a13",
+          boxShadow: "0 4px 0 #1f1a13",
+        }}
+      >
         <div className="relative text-center">
           <button
             type="button"
@@ -2026,20 +2035,20 @@ function EarlyRegistrationDialog({
               });
               onClose();
             }}
-            className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center text-[18px] text-[#8f7755]"
+            className="absolute right-[-30px] top-[-20px] flex h-8 w-8 items-center justify-center text-[28px] leading-none text-[#b7ad9a]"
             aria-label="닫기"
           >
             x
           </button>
           <h2
-            className="text-[18px] leading-[1.4] tracking-[0.9px] text-[#32322d]"
+            className="text-[19px] leading-[1.4] tracking-[0.3px] text-[#36501e]"
             style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
           >
             {view === "terms" ? "개인정보 수집 및 이용 동의" : "얼리 농장주 등록"}
           </h2>
           {view === "form" && (
             <p
-              className="mt-2 text-[10px] leading-[1.6] tracking-[0.4px] text-[#6a6a61]"
+              className="mt-[12px] text-[13px] leading-[1.35] tracking-[0.1px] text-[#68553e]"
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
             >
               앱이 출시되면 문자로 알려드려요
@@ -2052,7 +2061,7 @@ function EarlyRegistrationDialog({
         {view === "form" ? (
           <>
             <label
-              className="mt-5 block text-[11px] tracking-[0.5px] text-[#32322d]"
+              className="mt-[18px] block text-[12px] tracking-[0.2px] text-[#1f1a13]"
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
             >
               전화번호
@@ -2064,11 +2073,11 @@ function EarlyRegistrationDialog({
                 setPhone(event.target.value.replace(/\D/g, "").slice(0, 11));
                 setRegistrationError("");
               }}
-              placeholder="000-0000-0000"
-              className={`mt-2 h-[48px] w-full rounded-[8px] border bg-white px-4 text-[14px] tracking-[0.5px] text-[#32322d] placeholder:text-[#cdb792] focus:outline-none ${
+              placeholder="010-0000-0000"
+              className={`mt-[8px] h-[57px] w-full rounded-[10px] border bg-white px-[16px] text-[16px] tracking-[1.1px] text-[#32322d] placeholder:text-[#aaa398] focus:outline-none ${
                 registrationError
                   ? "border-[#d94b3d] focus:border-[#d94b3d]"
-                  : "border-[#cdb792] focus:border-[#628d38]"
+                  : "border-[#ded6c9] focus:border-[#628d38]"
               }`}
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
             />
@@ -2081,64 +2090,78 @@ function EarlyRegistrationDialog({
               </p>
             )}
 
-            <div className="mt-4 flex flex-col gap-3">
-              <div className="flex flex-col items-center gap-3 text-left">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setRequired((value) => {
-                      trackEvent("registration_required_consent_toggled", {
-                        checked: !value,
-                      });
-                      return !value;
-                    })
-                  }
-                  className="flex h-[60px] w-[280px] items-center gap-3 rounded-[8px] border border-[#cdb792] bg-[#fffdf8] px-4 text-left"
-                >
-                  <span
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[4px] border-2 text-[12px] text-white"
-                    style={{
-                      borderColor: required ? "#628d38" : "#cdb792",
-                      background: required ? "#628d38" : "white",
-                    }}
-                  >
-                    {required ? "✓" : ""}
-                  </span>
-                  <span
-                    className="flex-1 text-[10px] tracking-[0.4px] text-[#45372a]"
-                    style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
-                  >
-                    <span className="text-[#628d38]">[필수]</span> 개인정보 수집 및 이용 동의
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    trackEvent("registration_terms_opened");
-                    setView("terms");
+            <div className="mt-[16px]">
+              <div className="flex items-center text-left">
+              <button
+                type="button"
+                onClick={() =>
+                  setRequired((value) => {
+                    trackEvent("registration_required_consent_toggled", {
+                      checked: !value,
+                    });
+                    return !value;
+                  })
+                }
+                className="flex min-w-0 flex-1 items-center gap-[7px] text-left"
+              >
+                <span
+                  className="flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-[3px] text-[11px] leading-none text-white"
+                  style={{
+                    border: `1px solid ${required ? "#628d38" : "#cdb792"}`,
+                    background: required ? "#628d38" : "white",
                   }}
-                  className="flex h-[60px] w-[280px] shrink-0 items-center justify-center rounded-[8px] border border-[#cdb792] bg-[#fffdf8] text-[15px] tracking-[1.2px] text-[#68553e]"
+                >
+                  {required ? "✓" : ""}
+                </span>
+                <span
+                  className="min-w-0 text-[9px] tracking-[0.1px] text-[#45372a]"
                   style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
                 >
-                  보기
-                </button>
+                  <span className="text-[#628d38]">[필수]</span> 개인정보 수집 및 이용 동의
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  trackEvent("registration_terms_opened");
+                  setView("terms");
+                }}
+                className="ml-[9px] shrink-0 text-[10px] tracking-[0.2px] text-[#628d38] underline-offset-2"
+                style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+              >
+                보기
+              </button>
               </div>
+              <p
+                className="mt-[10px] text-[8px] leading-[1.55] tracking-[0.05px] text-[#8f7755]"
+                style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
+              >
+                휴대폰 번호는 앱 출시 안내 및 사전예약 보상 쿠폰 발송 목적으로만
+                <br />
+                사용되며, 사전예약 이벤트 종료 후 1개월 뒤 삭제됩니다.
+              </p>
             </div>
 
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={!canSubmit || isSubmitting}
-              className="mt-5 flex h-[52px] w-full items-center justify-center rounded-[12px] text-[16px] tracking-[1.6px] text-white"
-              style={{
-                background: canSubmit && !isSubmitting ? "#628d38" : "#cdb792",
-                cursor: canSubmit && !isSubmitting ? "pointer" : "not-allowed",
-                fontFamily: "Elice DX Neolli",
-                fontWeight: 500,
-              }}
-            >
-              {isSubmitting ? "등록 중..." : "등록하기"}
-            </button>
+            <div className="mt-[27px] flex justify-center">
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!canSubmit || isSubmitting}
+                className="relative flex h-[52px] w-full items-center justify-center text-[19px] tracking-[1.4px] text-white transition-opacity"
+                style={{
+                  background: "#36501e",
+                  clipPath:
+                    "polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px)",
+                  cursor: canSubmit && !isSubmitting ? "pointer" : "not-allowed",
+                  fontFamily: "Elice DX Neolli",
+                  fontWeight: 500,
+                  opacity: canSubmit && !isSubmitting ? 1 : 0.45,
+                }}
+              >
+                {isSubmitting ? "등록 중..." : "등록하기"}
+                <PawMark color="#78985a" />
+              </button>
+            </div>
           </>
         ) : (
           <>
@@ -2180,7 +2203,7 @@ function EarlyRegistrationDialog({
                 trackEvent("registration_terms_confirmed");
                 setView("form");
               }}
-              className="mx-auto mt-5 flex h-[60px] w-[280px] items-center justify-center rounded-[12px] bg-[#628d38] text-[15px] tracking-[1.2px] text-white"
+              className="mx-auto mt-5 flex h-[52px] w-full items-center justify-center rounded-[10px] bg-[#628d38] text-[15px] tracking-[1.2px] text-white"
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
             >
               확인
@@ -2309,10 +2332,19 @@ function CTAPage({
               >
                 사전등록 보상
               </p>
-              {["출시 알림 문자", "사전예약 한정 보상", "농장 입주 소식"].map(
-                (reward) => (
+              {["1기 포착단 한정 뱃지", "코인 3000개", "사전예약 한정 유니크 동물 적토마 지급"].map(
+                (reward, index) => (
                   <div key={reward} className="mt-2 flex items-center gap-2">
-                    <span className="h-4 w-4 shrink-0 rounded-[3px] border border-[#cdb792] bg-white" />
+                    {index < 3 ? (
+                      <img
+                        src={[imgBtnSmall, imgBtnSmall2, imgBtnSmall3][index]}
+                        alt=""
+                        className="h-[24px] w-[24px] shrink-0 object-contain"
+                        draggable={false}
+                      />
+                    ) : (
+                      <span className="h-4 w-4 shrink-0 rounded-[3px] border border-[#cdb792] bg-white" />
+                    )}
                     <span
                       className="text-[10px] tracking-[0.4px] text-[#6a6a61]"
                       style={{
