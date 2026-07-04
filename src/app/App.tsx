@@ -1,4 +1,4 @@
-import {
+﻿import {
   useState,
   useRef,
   useEffect,
@@ -8,8 +8,19 @@ import { trackEvent } from "../analytics";
 import imgBtnSmall from "../assets/ui/btn-sm.png";
 import imgBtnSmall2 from "../assets/ui/btn-sm-2.png";
 import imgBtnSmall3 from "../assets/ui/btn-sm-3.png";
+import imgBtnChange from "../assets/ui/btn-change.png";
+import imgBtnSave from "../assets/ui/btn-save.png";
+import imgBtnShare from "../assets/ui/btn-share.png";
+import imgBtnAlrim from "../assets/ui/btn-alrim.png";
+import imgBtnNew from "../assets/ui/btn-new.png";
 import imgBtnContentRight from "../assets/ui/btn-contents-right2.png";
+import imgCtaImageSaveButton from "../assets/ui/cta-image-save-button.png";
+import imgCtaRewardCard from "../assets/ui/cta-reward-card.png";
+import imgCompleteNoticeCard from "../assets/ui/complete-notice-card.png";
 import imgToastPrimary from "../assets/ui/primary.png";
+import imgModalWindowBottom from "../assets/ui/modal-window-bottom.png";
+import imgModalWindowMiddle from "../assets/ui/modal-window-middle.png";
+import imgModalWindowTop from "../assets/ui/modal-window-top.png";
 
 // ── Assets ───────────────────────────────────────────────────
 // Window frame & background
@@ -26,8 +37,8 @@ import imgCornerBLb from "../imports/2200포착-7/4e013676febbb1c8d774637eb5341c
 import imgEdgeBot from "../imports/2200포착-7/1e2ded9ef440b7f889fcfee3c5936e0f36da63c2.png";
 import imgCornerBR from "../imports/2200포착-7/38b961cc3cce7fcaa6c20191eb623633d23043b4.png";
 
-// Card pack (POCHAKPARM FARM green pack)
-import imgCardPack from "../imports/image.png";
+// Card pack (POCHAKFARM green pack)
+import imgCardPack from "../assets/ui/card-pack.png";
 
 // Dog pixel-art SVG component (inline JSX — avoids SVG file import issues)
 import FigmaDog from "../imports/Frame427322333/index";
@@ -353,6 +364,8 @@ function PixelButton({
   centerColor,
   textColor,
   pawColor,
+  imageSrc,
+  ariaLabel,
 }: {
   onClick?: () => void;
   disabled?: boolean;
@@ -363,6 +376,8 @@ function PixelButton({
   centerColor?: string;
   textColor?: string;
   pawColor?: string;
+  imageSrc?: string;
+  ariaLabel?: string;
 }) {
   const isSecondary = variant === "secondary";
   const resolvedFrameFilter = frameFilter ?? (isSecondary
@@ -373,12 +388,34 @@ function PixelButton({
   const resolvedPawColor = pawColor ?? (isSecondary ? "#e3d5bd" : "#78985a");
   const frameSize = "12px";
   const gridTemplate = `${frameSize} 1fr ${frameSize}`;
+  const pressMotionClass = disabled
+    ? "transition-opacity"
+    : "transition-[transform,filter,opacity] duration-100 ease-out active:translate-y-[2px] active:scale-[0.98] active:brightness-[0.96] motion-reduce:transition-none motion-reduce:active:translate-y-0 motion-reduce:active:scale-100";
+
+  if (imageSrc) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        className={`relative h-[60px] w-[280px] overflow-hidden disabled:cursor-not-allowed disabled:opacity-40 ${pressMotionClass}`}
+        aria-label={ariaLabel}
+      >
+        <img
+          src={imageSrc}
+          alt=""
+          className="absolute inset-0 h-full w-full object-fill"
+          draggable={false}
+        />
+      </button>
+    );
+  }
 
   if (isSecondary) {
     return (
       <div
         onClick={disabled ? undefined : onClick}
-        className="relative h-[60px] w-[284px] transition-opacity"
+        className={`relative h-[60px] w-[284px] ${pressMotionClass}`}
         style={{
           background: "#DCCCAE",
           clipPath:
@@ -421,7 +458,7 @@ function PixelButton({
   return (
     <div
       onClick={disabled ? undefined : onClick}
-      className="relative grid w-[280px] h-[60px] transition-opacity"
+      className={`relative grid w-[280px] h-[60px] ${pressMotionClass}`}
       style={{
         gridTemplateColumns: gridTemplate,
         gridTemplateRows: gridTemplate,
@@ -538,50 +575,32 @@ function WindowPanel({
     <div className="flex flex-col w-full">
       <div
         className="relative w-full shrink-0 overflow-hidden"
-        style={{ aspectRatio: "330.944 / 80.4" }}
+        style={{ aspectRatio: "331 / 81" }}
       >
         <img
-          src={imgWindowFrame}
+          src={imgModalWindowTop}
           alt=""
-          className="absolute pointer-events-none max-w-none"
-          style={{
-            height: "475.78%",
-            left: "-0.71%",
-            top: "-1.9%",
-            width: "101.51%",
-          }}
+          className="absolute inset-0 size-full object-fill pointer-events-none"
         />
       </div>
-      <div className="relative w-full overflow-hidden shrink-0">
+      <div className="relative -mt-px w-full overflow-hidden shrink-0">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <img
-            src={imgWindowFrame}
+            src={imgModalWindowMiddle}
             alt=""
-            className="absolute max-w-none"
-            style={{
-              height: "169.71%",
-              left: "-0.71%",
-              top: "-53.06%",
-              width: "101.51%",
-            }}
+            className="absolute inset-0 size-full object-fill"
           />
         </div>
         <div className="relative z-10">{children}</div>
       </div>
       <div
         className="relative w-full shrink-0 overflow-hidden"
-        style={{ aspectRatio: "330.944 / 38.4" }}
+        style={{ aspectRatio: "331 / 39" }}
       >
         <img
-          src={imgWindowFrame}
+          src={imgModalWindowBottom}
           alt=""
-          className="absolute pointer-events-none max-w-none"
-          style={{
-            height: "996.16%",
-            left: "-0.71%",
-            top: "-896.16%",
-            width: "101.51%",
-          }}
+          className="absolute inset-0 size-full object-fill pointer-events-none"
         />
       </div>
     </div>
@@ -1353,7 +1372,13 @@ function ResultOverlay({
       </div>
 
       <div className="mt-[65.35px] flex flex-col items-center gap-[6px]">
-        <PixelButton onClick={handleSave} showPaw>
+        <PixelButton
+          onClick={handleSave}
+          showPaw
+          imageSrc={imgBtnSave}
+          ariaLabel="이미지 저장"
+        >
+          {false && (
           <span
             className="text-[16px] tracking-[1.4px] text-white text-center w-full"
             style={{
@@ -1363,6 +1388,7 @@ function ResultOverlay({
           >
             이미지 저장
           </span>
+          )}
         </PixelButton>
 
         {onRegister && (
@@ -1371,6 +1397,8 @@ function ResultOverlay({
             onClick={handleShare}
             variant="secondary"
             showPaw
+            imageSrc={imgBtnShare}
+            ariaLabel="친구에게 공유하기"
           >
             친구에게 공유하기
           </PixelButton>
@@ -1574,7 +1602,8 @@ function ClassicV2Version() {
   if (registrationView === "complete") {
     return (
       <CompletePage
-        onShareAgain={() => {}}
+        aiImage={generatedAssets?.aiImage ?? null}
+        onCreateNew={handleReset}
         shareUrl={createCtaShareLink(
           characterName.trim(),
           generatedAssets?.aiImage ?? null,
@@ -1780,6 +1809,8 @@ function ClassicV2Version() {
                   onClick={handleConvert}
                   disabled={!isButtonActive}
                   showPaw
+                  imageSrc={imgBtnChange}
+                  ariaLabel="변환하기"
                 >
                   <span
                     className="w-full text-center text-[16px] tracking-[1.6px] text-white"
@@ -1914,6 +1945,9 @@ function EarlyRegistrationDialog({
         ? `${digits.slice(0, 3)}-${digits.slice(3)}`
         : `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
   const canSubmit = digits.length === 11 && required;
+  const canBypassRegistration =
+    import.meta.env.DEV ||
+    new URLSearchParams(window.location.search).get("preview") === "1";
 
   useEffect(() => {
     trackEvent("registration_dialog_viewed");
@@ -1968,6 +2002,15 @@ function EarlyRegistrationDialog({
         message:
           error instanceof Error ? error.message : "unknown_error",
       });
+
+      if (canBypassRegistration) {
+        trackEvent("registration_submit_bypassed", {
+          reason: "api_unavailable_preview",
+        });
+        onComplete();
+        return;
+      }
+
       setRegistrationError(
         error instanceof Error
           ? error.message
@@ -1976,7 +2019,7 @@ function EarlyRegistrationDialog({
     } finally {
       setIsSubmitting(false);
     }
-  }, [canSubmit, digits, isSubmitting, onComplete]);
+  }, [canBypassRegistration, canSubmit, digits, isSubmitting, onComplete]);
   const termsSections = [
     {
       title: "수집·이용 목적",
@@ -2319,13 +2362,26 @@ function CTAPage({
             <button
               type="button"
               onClick={handleImageSave}
-              className="flex h-[42px] w-[105.15px] items-center justify-center rounded-[8px] border border-[#000000] bg-[#fffdf8] text-[12px] tracking-[0.4px] text-[#32322d]"
-              style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+              className="relative h-[42px] w-[105.15px] overflow-hidden text-transparent"
+              aria-label="이미지 저장"
             >
+              <img
+                src={imgCtaImageSaveButton}
+                alt=""
+                className="absolute inset-0 h-full w-full object-fill"
+                draggable={false}
+              />
               이미지 저장
             </button>
 
-            <div className="w-full rounded-[4px] border border-[#cdb792] bg-[#fffdf8] px-3 py-3">
+            <img
+              src={imgCtaRewardCard}
+              alt="포착팜 오픈 알림 혜택"
+              className="w-full object-contain"
+              draggable={false}
+            />
+
+            <div className="hidden">
               <p
                 className="mb-2 text-center text-[11px] tracking-[1.1px] text-[#68553e]"
                 style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
@@ -2365,6 +2421,8 @@ function CTAPage({
                 setShowDialog(true);
               }}
               showPaw
+              imageSrc={imgBtnAlrim}
+              ariaLabel="오픈 알림 받기"
             >
               <span
                 className="w-full text-center text-[16px] tracking-[1.6px] text-white"
@@ -2378,6 +2436,8 @@ function CTAPage({
               onClick={handleShare}
               variant="secondary"
               showPaw
+              imageSrc={imgBtnShare}
+              ariaLabel="친구에게 공유하기"
             >
               친구에게 공유하기
             </PixelButton>
@@ -2404,10 +2464,12 @@ function CTAPage({
 }
 
 function CompletePage({
-  onShareAgain,
+  aiImage,
+  onCreateNew,
   shareUrl,
 }: {
-  onShareAgain: () => void;
+  aiImage: string | null;
+  onCreateNew: () => void;
   shareUrl: string;
 }) {
   const [showToast, setShowToast] = useState(false);
@@ -2420,10 +2482,14 @@ function CompletePage({
     if (await copyShareLink(shareUrl)) {
       trackEvent("registration_complete_share_copied");
       setShowToast(true);
-      onShareAgain();
     } else {
       trackEvent("registration_complete_share_failed");
     }
+  };
+
+  const handleCreateNew = () => {
+    trackEvent("registration_complete_create_new_clicked");
+    onCreateNew();
   };
 
   return (
@@ -2437,43 +2503,82 @@ function CompletePage({
           backgroundSize: "361px",
         }}
       />
-      <main className="relative flex min-h-[100dvh] w-full max-w-[360px] flex-col justify-center px-[14px] pb-8 pt-[24px]">
+      <main className="relative flex min-h-[100dvh] w-full max-w-[360px] flex-col justify-center px-[14px] pb-4 pt-[24px]">
         <WindowPanel>
-          <div className="flex flex-col items-center gap-4 px-6 pb-6 pt-[30px]">
+          <div className="flex flex-col items-center px-6 pb-5 pt-[30.33px]">
             <p
-              className="text-center text-[18px] leading-[1.4] tracking-[0.9px] text-[#32322d]"
+              className="text-center text-[20px] leading-[1.35] tracking-[0.4px] text-[#32322d]"
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
             >
               등록 완료
             </p>
             <p
-              className="text-center text-[10px] tracking-[0.4px] text-[#6a6a61]"
+              className="mt-[12px] text-center text-[11px] tracking-[0.2px] text-[#6a6a61]"
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
             >
-              출시되면 문자로 가장 먼저 알려드릴게요
+              앱이 오픈되면 문자로 알려드릴게요
             </p>
-            <div className="w-full rounded-[4px] border border-[#cdb792] bg-[#fffdf8] px-4 py-4">
+
+            <div
+              className="relative mt-[34px] h-[206px] w-[206px] rotate-[-6deg] rounded-[8px] border border-[#8d8a7d] bg-[#fbfaf3] p-[10px]"
+              style={{
+                boxShadow:
+                  "0 14px 24px rgba(65, 52, 35, 0.18), 0 2px 0 rgba(255,255,255,0.8) inset",
+              }}
+            >
+              <div className="absolute left-1/2 top-[-11px] h-[22px] w-[68px] -translate-x-1/2 rotate-[2deg] bg-[#ecdca2]/80" />
+              <div className="relative h-full w-full overflow-hidden rounded-[4px] border border-[#d2d0c1] bg-[#eef4e4]">
+                <img
+                  src={aiImage || imgCharFront}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                  draggable={false}
+                />
+              </div>
+            </div>
+
+            <img
+              src={imgCompleteNoticeCard}
+              alt="안내사항"
+              className="mt-[34px] w-full object-contain"
+              draggable={false}
+            />
+
+            <div className="hidden">
+              <p
+                className="text-center text-[13px] tracking-[0.3px] text-[#68553e]"
+                style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+              >
+                안내사항
+              </p>
+              <div className="mt-[12px] space-y-[5px]">
               {[
-                "출시 알림은 문자로 발송됩니다.",
-                "사전예약 보상은 출시 후 순차 지급됩니다.",
-                "혜택 알림 동의는 언제든 변경할 수 있습니다.",
+                "출시 알림은 문자로 발송됩니다",
+                "사전예약 보상은 앱 출시 후 계정당 1회 지급됩니다",
+                "이벤트/혜택 알림 수신 동의를 하지 않을 경우 보상 제공 대상자에서 제외됩니다.",
+                "변경을 원하시는 경우 아래 연락처로 문의 부탁드립니다.",
               ].map((text) => (
                 <p
                   key={text}
-                  className="mb-2 text-[10px] leading-[1.5] tracking-[0.36px] text-[#8f7755] last:mb-0"
+                  className="text-[9px] leading-[1.45] tracking-[0.05px] text-[#8f8a80]"
                   style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
                 >
-                  {text}
+                  · {text}
                 </p>
               ))}
+              </div>
             </div>
-            <PixelButton
-              onClick={handleShare}
-              variant="secondary"
-              showPaw
-            >
-              친구에게 공유하기
-            </PixelButton>
+            <div className="mt-[26.8px]">
+              <PixelButton
+                onClick={handleCreateNew}
+                variant="secondary"
+                showPaw
+                imageSrc={imgBtnNew}
+                ariaLabel="새로운 캐릭터 만들기"
+              >
+                새로운 캐릭터 만들기
+              </PixelButton>
+            </div>
           </div>
         </WindowPanel>
       </main>
