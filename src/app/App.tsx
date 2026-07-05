@@ -1156,7 +1156,7 @@ function ResultOverlay({
   const trackCardInteraction = useCallback((method: "mouse" | "touch") => {
     if (trackedCardInteractionRef.current) return;
     trackedCardInteractionRef.current = true;
-    trackEvent("classic_v2_result_card_interacted", {
+    trackEvent("result_card_interacted", {
       method,
     });
   }, []);
@@ -1234,13 +1234,13 @@ function ResultOverlay({
   };
 
   const handleSave = useCallback(async () => {
-    trackEvent("classic_v2_card_save_clicked");
+    trackEvent("card_save_clicked");
 
     try {
       await saveCardImage(assets.cardImage, characterName);
-      trackEvent("classic_v2_card_save_completed");
+      trackEvent("card_save_completed");
     } catch (error) {
-      trackEvent("classic_v2_card_save_failed", {
+      trackEvent("card_save_failed", {
         message:
           error instanceof Error ? error.message : "unknown_error",
       });
@@ -1253,12 +1253,10 @@ function ResultOverlay({
   }, [assets.cardImage, characterName]);
 
   const handleShare = useCallback(async () => {
-    trackEvent("classic_v2_result_share_clicked");
+    trackEvent("result_share_clicked");
     if (await copyShareLink(createCtaShareLink(characterName, assets.aiImage))) {
-      trackEvent("classic_v2_result_share_copied");
+      trackEvent("result_share_copied");
       setShowToast(true);
-    } else {
-      trackEvent("classic_v2_result_share_failed");
     }
   }, [assets.aiImage, characterName]);
 
@@ -1268,7 +1266,7 @@ function ResultOverlay({
         <button
           type="button"
           onClick={() => {
-            trackEvent("classic_v2_cta_opened_from_result");
+            trackEvent("cta_opened_from_result");
             onRegister();
           }}
           className="fixed right-5 top-8 z-20 flex h-9 w-9 items-center justify-center text-[26px] leading-none text-white/95"
@@ -1433,32 +1431,31 @@ function ClassicV2Version() {
     "cta" | "complete" | null
   >(isSharedCta ? "cta" : null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const trackedNameInputRef = useRef(false);
   const isButtonActive =
     !!uploadedImage && characterName.trim().length > 0;
   const isPreviewMode = searchParams.get("preview") === "1";
 
   useEffect(() => {
-    trackEvent("classic_v2_page_viewed", {
+    trackEvent("page_viewed", {
       is_shared_cta: isSharedCta,
       is_preview: isPreviewMode,
     });
   }, [isPreviewMode, isSharedCta]);
 
   useEffect(() => {
-    trackEvent("classic_v2_phase_viewed", {
+    trackEvent("phase_viewed", {
       phase,
     });
   }, [phase]);
 
   const readFile = useCallback(async (file: File) => {
     if (!ACCEPTED_TYPES.has(file.type)) {
-      trackEvent("classic_v2_photo_upload_rejected", {
+      trackEvent("photo_upload_rejected", {
         file_type: file.type || "unknown",
       });
       return;
     }
-    trackEvent("classic_v2_photo_upload_started", {
+    trackEvent("photo_upload_started", {
       file_type: file.type,
       file_size_kb: Math.round(file.size / 1024),
     });
@@ -1466,12 +1463,12 @@ function ClassicV2Version() {
 
     try {
       setUploadedImage(await createUploadPreview(file));
-      trackEvent("classic_v2_photo_upload_completed", {
+      trackEvent("photo_upload_completed", {
         file_type: file.type,
         file_size_kb: Math.round(file.size / 1024),
       });
     } catch (error) {
-      trackEvent("classic_v2_photo_upload_failed", {
+      trackEvent("photo_upload_failed", {
         file_type: file.type,
         message:
           error instanceof Error ? error.message : "unknown_error",
@@ -1486,7 +1483,7 @@ function ClassicV2Version() {
 
   const handleConvert = useCallback(async () => {
     if (!isButtonActive) return;
-    trackEvent("classic_v2_convert_started", {
+    trackEvent("convert_started", {
       name_length: characterName.trim().length,
       is_preview: isPreviewMode,
     });
@@ -1498,7 +1495,7 @@ function ClassicV2Version() {
       await new Promise((resolve) => window.setTimeout(resolve, 1400));
       setGeneratedAssets(FALLBACK_CARD_ASSETS);
       setPhase("pack");
-      trackEvent("classic_v2_convert_completed", {
+      trackEvent("convert_completed", {
         mode: "preview",
       });
       return;
@@ -1519,16 +1516,8 @@ function ClassicV2Version() {
       const payload = await response.json();
       if (!response.ok) {
         const apiErrorMessage = formatApiErrorPayload(payload);
-        trackEvent("classic_v2_convert_failed", {
+        trackEvent("convert_failed", {
           message: apiErrorMessage,
-          status:
-            payload && typeof payload === "object" && "status" in payload
-              ? String((payload as Record<string, unknown>).status)
-              : String(response.status),
-          code:
-            payload && typeof payload === "object" && "code" in payload
-              ? String((payload as Record<string, unknown>).code)
-              : "unknown",
         });
         setGenerationError(apiErrorMessage);
         setPhase("idle");
@@ -1549,11 +1538,11 @@ function ClassicV2Version() {
             : FALLBACK_CARD_ASSETS.aiImage,
       });
       setPhase("pack");
-      trackEvent("classic_v2_convert_completed", {
+      trackEvent("convert_completed", {
         mode: "api",
       });
     } catch (error) {
-      trackEvent("classic_v2_convert_failed", {
+      trackEvent("convert_failed", {
         message:
           error instanceof Error ? error.message : "unknown_error",
       });
@@ -1567,16 +1556,15 @@ function ClassicV2Version() {
   }, [characterName, isButtonActive, isPreviewMode, uploadedImage]);
 
   const handleOpenPack = useCallback(() => {
-    trackEvent("classic_v2_card_pack_opened");
+    trackEvent("card_pack_opened");
     setPhase("dim");
   }, []);
   const handleResult = useCallback(() => {
-    trackEvent("classic_v2_result_viewed");
+    trackEvent("result_viewed");
     setPhase("result");
   }, []);
 
   const handleReset = useCallback(() => {
-    trackEvent("classic_v2_reset_clicked");
     setPhase("idle");
     setUploadedImage(null);
     setGeneratedAssets(null);
@@ -1681,7 +1669,7 @@ function ClassicV2Version() {
                 accept="image/jpeg,image/png,image/webp"
                 onChange={(e) => {
                   if (e.target.files?.[0]) {
-                    trackEvent("classic_v2_photo_selected");
+                    trackEvent("photo_selected");
                     readFile(e.target.files[0]);
                   }
                 }}
@@ -1706,12 +1694,12 @@ function ClassicV2Version() {
                   e.preventDefault();
                   setIsDragging(false);
                   if (e.dataTransfer.files[0]) {
-                    trackEvent("classic_v2_photo_dropped");
+                    trackEvent("photo_dropped");
                     readFile(e.dataTransfer.files[0]);
                   }
                 }}
                 onClick={() => {
-                  trackEvent("classic_v2_photo_picker_opened", {
+                  trackEvent("photo_picker_opened", {
                     has_existing_photo: !!uploadedImage,
                   });
                   fileInputRef.current?.click();
@@ -1785,10 +1773,6 @@ function ClassicV2Version() {
                 type="text"
                 value={characterName}
                 onChange={(e) => {
-                  if (!trackedNameInputRef.current) {
-                    trackedNameInputRef.current = true;
-                    trackEvent("classic_v2_name_input_started");
-                  }
                   setCharacterName(
                     e.target.value.replace(NAME_FILTER, "").slice(0, 6),
                   );
@@ -1953,16 +1937,10 @@ function EarlyRegistrationDialog({
     trackEvent("registration_dialog_viewed");
   }, []);
 
-  useEffect(() => {
-    trackEvent("registration_dialog_section_viewed", {
-      section: view,
-    });
-  }, [view]);
-
   const handleSubmit = useCallback(async () => {
     if (!canSubmit || isSubmitting) return;
 
-    trackEvent("registration_submit_started");
+    trackEvent("registration_submit_clicked");
     setRegistrationError("");
     setIsSubmitting(true);
 
@@ -1995,18 +1973,9 @@ function EarlyRegistrationDialog({
         throw new Error("사전예약 API 응답이 올바르지 않아요.");
       }
 
-      trackEvent("registration_submit_completed");
       onComplete();
     } catch (error) {
-      trackEvent("registration_submit_failed", {
-        message:
-          error instanceof Error ? error.message : "unknown_error",
-      });
-
       if (canBypassRegistration) {
-        trackEvent("registration_submit_bypassed", {
-          reason: "api_unavailable_preview",
-        });
         onComplete();
         return;
       }
@@ -2139,9 +2108,6 @@ function EarlyRegistrationDialog({
                 type="button"
                 onClick={() =>
                   setRequired((value) => {
-                    trackEvent("registration_required_consent_toggled", {
-                      checked: !value,
-                    });
                     return !value;
                   })
                 }
@@ -2166,7 +2132,6 @@ function EarlyRegistrationDialog({
               <button
                 type="button"
                 onClick={() => {
-                  trackEvent("registration_terms_opened");
                   setView("terms");
                 }}
                 className="ml-[9px] shrink-0 text-[10px] tracking-[0.2px] text-[#628d38] underline-offset-2"
@@ -2243,7 +2208,6 @@ function EarlyRegistrationDialog({
             <button
               type="button"
               onClick={() => {
-                trackEvent("registration_terms_confirmed");
                 setView("form");
               }}
               className="mx-auto mt-5 flex h-[52px] w-full items-center justify-center rounded-[10px] bg-[#628d38] text-[15px] tracking-[1.2px] text-white"
@@ -2284,22 +2248,13 @@ function CTAPage({
     if (await copyShareLink(createCtaShareLink(characterName, aiImage))) {
       trackEvent("cta_share_copied");
       setShowToast(true);
-    } else {
-      trackEvent("cta_share_failed");
     }
   };
 
   const handleImageSave = async () => {
-    trackEvent("cta_image_save_clicked");
-
     try {
       await saveCardImage(aiImage || imgCharFront, characterName || "pixel-animal");
-      trackEvent("cta_image_save_completed");
-    } catch (error) {
-      trackEvent("cta_image_save_failed", {
-        message:
-          error instanceof Error ? error.message : "unknown_error",
-      });
+    } catch {
     }
   };
 
@@ -2314,6 +2269,22 @@ function CTAPage({
           backgroundSize: "361px",
         }}
       />
+      <button
+        type="button"
+        onClick={() => {
+          trackEvent("cta_back_to_result_clicked");
+          onBack();
+        }}
+        className="fixed right-5 top-8 z-20 flex h-9 w-9 items-center justify-center text-[26px] leading-none text-white/95"
+        style={{
+          fontFamily: "Galmuri11",
+          fontWeight: 700,
+          textShadow: "0 2px 6px rgba(0,0,0,0.45)",
+        }}
+        aria-label="결과 화면으로 돌아가기"
+      >
+        ×
+      </button>
       <main className="relative flex min-h-[100dvh] w-full max-w-[360px] flex-col justify-center px-[14px] pb-8 pt-[24px]">
         <WindowPanel>
           <div className="flex flex-col items-center gap-4 px-6 pb-6 pt-[27px]">
@@ -2417,7 +2388,6 @@ function CTAPage({
 
             <PixelButton
               onClick={() => {
-                trackEvent("cta_registration_open_clicked");
                 setShowDialog(true);
               }}
               showPaw
@@ -2482,13 +2452,10 @@ function CompletePage({
     if (await copyShareLink(shareUrl)) {
       trackEvent("registration_complete_share_copied");
       setShowToast(true);
-    } else {
-      trackEvent("registration_complete_share_failed");
     }
   };
 
   const handleCreateNew = () => {
-    trackEvent("registration_complete_create_new_clicked");
     onCreateNew();
   };
 
@@ -2594,4 +2561,3 @@ function CompletePage({
 export default function App() {
   return <ClassicV2Version />;
 }
-
