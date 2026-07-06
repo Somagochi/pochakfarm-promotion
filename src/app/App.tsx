@@ -112,6 +112,7 @@ const ONBOARDING_SLIDES = [
   "/assets/carousel4.png",
 ];
 const LOADING_ANIMAL_ICON = "/assets/loading-animal.png";
+const LOADING_WARNING_ICON = "/assets/warning.png";
 
 const KEYFRAMES = `
   @keyframes float      { 0%,100%{transform:translateY(0)}   50%{transform:translateY(-10px)} }
@@ -767,79 +768,99 @@ function ProcessingPanel() {
   const loadingPercent = Math.min(95, Math.round(progress * 100));
 
   return (
-    <WindowPanel>
-      <div className="flex min-h-[590px] flex-col items-center px-6 pb-5 pt-0">
-        <div className="flex w-full flex-col items-center">
-          <div
-            className="relative flex h-[82px] w-[92px] items-center justify-center"
-            style={{ animation: "softPulse 1.6s ease-in-out infinite" }}
-          >
-            <img
-              src={LOADING_ANIMAL_ICON}
-              alt=""
-              className="absolute h-[70px] w-[78px] object-contain opacity-20"
-              draggable={false}
-            />
+    <div className="flex w-full flex-col items-center">
+      <WindowPanel>
+        <div className="flex min-h-[590px] flex-col items-center px-6 pb-5 pt-0">
+          <div className="flex w-full flex-col items-center">
             <div
-              className="absolute h-[70px] w-[78px]"
-              style={{
-                clipPath: `inset(${100 - loadingPercent}% 0 0 0)`,
-                transition: "clip-path 0.1s linear",
-              }}
-              aria-hidden="true"
+              className="relative flex h-[82px] w-[92px] items-center justify-center"
+              style={{ animation: "softPulse 1.6s ease-in-out infinite" }}
             >
               <img
                 src={LOADING_ANIMAL_ICON}
                 alt=""
-                className="absolute h-[70px] w-[78px] object-contain"
+                className="absolute h-[70px] w-[78px] object-contain opacity-20"
                 draggable={false}
               />
+              <div
+                className="absolute h-[70px] w-[78px]"
+                style={{
+                  clipPath: `inset(${100 - loadingPercent}% 0 0 0)`,
+                  transition: "clip-path 0.1s linear",
+                }}
+                aria-hidden="true"
+              >
+                <img
+                  src={LOADING_ANIMAL_ICON}
+                  alt=""
+                  className="absolute h-[70px] w-[78px] object-contain"
+                  draggable={false}
+                />
+              </div>
+              <span
+                className="relative z-10 rounded-full bg-[#faf5eb]/85 px-2 py-1 text-[12px] tracking-[0.6px] text-[#36501e]"
+                style={{
+                  fontFamily: "Galmuri11",
+                  fontWeight: 700,
+                  boxShadow: "0 1px 0 rgba(104,85,62,0.18)",
+                }}
+              >
+                {loadingPercent}%
+              </span>
             </div>
-            <span
-              className="relative z-10 rounded-full bg-[#faf5eb]/85 px-2 py-1 text-[12px] tracking-[0.6px] text-[#36501e]"
+
+            <p
+              className="mt-[19.94px] text-center text-[10px] tracking-[1.1px] text-[#628d38]"
+              style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
+            >
+              ANALIZING...
+            </p>
+            <p
+              className="mt-[6.35px] text-center text-[18px] leading-[1.35] tracking-[0.7px] text-[#32322d]"
               style={{
-                fontFamily: "Galmuri11",
-                fontWeight: 700,
-                boxShadow: "0 1px 0 rgba(104,85,62,0.18)",
+                fontFamily: "Elice DX Neolli",
+                fontWeight: 500,
               }}
             >
-              {loadingPercent}%
-            </span>
+              동물을 분석하고 있어요
+            </p>
+            <div
+              className="mt-[19.94px] flex min-h-[48px] flex-col items-center gap-[9.61px] px-3 text-center text-[10px] leading-none tracking-[0.35px] text-[#8f7755]"
+              style={{
+                fontFamily: "Elice DX Neolli",
+                fontWeight: 300,
+              }}
+            >
+              <p className="text-[10px] text-[#6A6A61]">실제 앱에서는 더 빠르고 재밌있게</p>
+              <p className="text-[10px] text-[#6A6A61]">포착할 수 있는 기능들을 만나볼 수 있어요</p>
+              <span className="text-[8px] text-[#BFBFB6]">
+                *웹사이트를 종료하더라도 변환은 유지돼요
+              </span>
+            </div>
           </div>
 
-          <p
-            className="mt-[19.94px] text-center text-[10px] tracking-[1.1px] text-[#628d38]"
-            style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
-          >
-            ANALIZING...
-          </p>
-          <p
-            className="mt-[6.35px] text-center text-[18px] leading-[1.35] tracking-[0.7px] text-[#32322d]"
-            style={{
-              fontFamily: "Elice DX Neolli",
-              fontWeight: 500,
-            }}
-          >
-            동물을 분석하고 있어요
-          </p>
-          <div
-            className="mt-[19.94px] flex min-h-[48px] flex-col items-center gap-[9.61px] px-3 text-center text-[10px] leading-none tracking-[0.35px] text-[#8f7755]"
-            style={{
-              fontFamily: "Elice DX Neolli",
-              fontWeight: 300,
-            }}
-          >
-            <p className="text-[10px] text-[#6A6A61]">실제 앱에서는 더 빠르고 재밌있게</p>
-            <p className="text-[10px] text-[#6A6A61]">포착할 수 있는 기능들을 만나볼 수 있어요</p>
-            <span className="text-[8px] text-[#BFBFB6]">
-              *웹사이트를 종료하더라도 변환은 유지돼요
-            </span>
-          </div>
+          <OnboardingCarousel className="mt-[33.81px]" />
         </div>
-
-        <OnboardingCarousel className="mt-[33.81px]" />
+      </WindowPanel>
+      <div className="mt-3 flex w-full items-center justify-center gap-[6px]">
+        <img
+          src={LOADING_WARNING_ICON}
+          alt=""
+          className="h-[24px] w-[24px] shrink-0 object-contain"
+          draggable={false}
+        />
+        <p
+          className="whitespace-nowrap text-left text-[8px] mt-2 leading-none text-[#f2ebdd]"
+          style={{
+            fontFamily: "Elice DX Neolli",
+            fontWeight: 500,
+            textShadow: "0 1px 0 rgba(54,80,30,0.5)",
+          }}
+        >
+          새로고침하면 작업이 중단될 수 있습니다. 잠시만 기다려 주세요.
+        </p>
       </div>
-    </WindowPanel>
+    </div>
   );
 }
 
