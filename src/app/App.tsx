@@ -8,12 +8,23 @@ import { trackEvent } from "../analytics";
 import imgBtnSmall from "../assets/ui/btn-sm.png";
 import imgBtnSmall2 from "../assets/ui/btn-sm-2.png";
 import imgBtnSmall3 from "../assets/ui/btn-sm-3.png";
-import imgBtnChange from "../assets/ui/btn-change.png";
+import imgBtnLg from "../assets/ui/btn-lg.png";
 import imgBtnSave from "../assets/ui/btn-save.png";
 import imgBtnShare from "../assets/ui/btn-share.png";
 import imgBtnAlrim from "../assets/ui/btn-alrim.png";
 import imgBtnNew from "../assets/ui/btn-new.png";
 import imgBtnContentRight from "../assets/ui/btn-contents-right2.png";
+import imgIntroBg from "../assets/ui/intro-bg.png";
+import imgIntroHeader from "../assets/ui/intro-header.png";
+import imgIntroHero from "../assets/ui/intro-hero.png";
+import imgIntroCountdownPanel from "../assets/ui/intro-countdown-panel.png";
+import imgIntroEnjoyTitle from "../assets/ui/intro-enjoy-title.png";
+import imgIntroTryTitle from "../assets/ui/intro-try-title.png";
+import imgIntroLimitedText from "../assets/ui/intro-limited-text.png";
+import imgIntroRewardText from "../assets/ui/intro-reward-text.png";
+import imgIntroImageGuideButton from "../assets/ui/intro-image-guide-button.png";
+import imgImageGuideModal from "../assets/ui/image-guide-modal.png";
+import imgIntroFooter from "../assets/ui/intro-footer.png";
 import imgCtaImageSaveButton from "../assets/ui/cta-image-save-button.png";
 import imgCtaRewardCard from "../assets/ui/cta-reward-card.png";
 import imgCompleteNoticeCard from "../assets/ui/complete-notice-card.png";
@@ -111,6 +122,7 @@ const ONBOARDING_SLIDES = [
   "/assets/carousel3.png",
   "/assets/carousel4.png",
 ];
+const LAUNCH_TARGET_TIME = new Date("2026-08-01T00:00:00+09:00").getTime();
 const LOADING_ANIMAL_ICON = "/assets/loading-animal.png";
 const LOADING_WARNING_ICON = "/assets/warning.png";
 
@@ -123,6 +135,23 @@ const KEYFRAMES = `
 `;
 
 type Phase = "idle" | "processing" | "pack" | "dim" | "result";
+
+function getLaunchCountdown() {
+  const remainingSeconds = Math.max(
+    0,
+    Math.floor((LAUNCH_TARGET_TIME - Date.now()) / 1000),
+  );
+  const days = Math.floor(remainingSeconds / 86400);
+  const hours = Math.floor((remainingSeconds % 86400) / 3600);
+  const minutes = Math.floor((remainingSeconds % 3600) / 60);
+  const seconds = remainingSeconds % 60;
+
+  return { days, hours, minutes, seconds };
+}
+
+function formatCountdownUnit(value: number) {
+  return String(value).padStart(2, "0");
+}
 
 async function copyShareLink(url = window.location.href) {
   if (navigator.clipboard?.writeText) {
@@ -399,13 +428,13 @@ function PixelButton({
         type="button"
         onClick={onClick}
         disabled={disabled}
-        className={`relative h-[60px] w-[280px] overflow-hidden disabled:cursor-not-allowed disabled:opacity-40 ${pressMotionClass}`}
+        className={`relative h-[60px] w-[280px] cursor-pointer select-none overflow-hidden will-change-transform disabled:cursor-not-allowed disabled:opacity-40 ${pressMotionClass}`}
         aria-label={ariaLabel}
       >
         <img
           src={imageSrc}
           alt=""
-          className="absolute inset-0 h-full w-full object-fill"
+          className="pointer-events-none absolute inset-0 h-full w-full object-fill"
           draggable={false}
         />
       </button>
@@ -651,6 +680,76 @@ function AnimatedPanel({
   );
 }
 
+function LaunchCountdownPanel() {
+  const [countdown, setCountdown] = useState(getLaunchCountdown);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setCountdown(getLaunchCountdown());
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return (
+    <div
+      className="pointer-events-none absolute left-1/2 top-[65%] z-[2] w-[318px] max-w-[86%] -translate-x-1/2"
+      aria-label={`출시까지 ${countdown.days}일 ${countdown.hours}시 ${countdown.minutes}분 ${countdown.seconds}초`}
+    >
+      <img
+        src={imgIntroCountdownPanel}
+        alt=""
+        className="block w-full"
+        draggable={false}
+      />
+      <div
+        className="absolute left-0 right-0 top-[18%] text-center text-[15px] leading-none text-white"
+        style={{
+          fontFamily: "Galmuri11",
+          fontWeight: 700,
+          letterSpacing: "0.38em",
+          textShadow:
+            "0 0 6px rgba(255,255,255,0.9), 0 0 14px rgba(210,255,255,0.65)",
+        }}
+      >
+        앞으로 출시까지
+      </div>
+      <div
+        className="absolute left-[15.5%] right-[15.5%] top-[43.5%] flex items-center justify-between text-center text-[23px] leading-none text-white"
+        style={{
+          fontFamily: "Galmuri11",
+          fontWeight: 700,
+          textShadow:
+            "0 0 6px rgba(255,255,255,0.95), 0 0 14px rgba(210,255,255,0.85)",
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        <span>{formatCountdownUnit(countdown.days)}</span>
+        <span>:</span>
+        <span>{formatCountdownUnit(countdown.hours)}</span>
+        <span>:</span>
+        <span>{formatCountdownUnit(countdown.minutes)}</span>
+        <span>:</span>
+        <span>{formatCountdownUnit(countdown.seconds)}</span>
+      </div>
+      <div
+        className="absolute left-[16%] right-[16%] top-[69%] grid grid-cols-4 text-center text-[11px] leading-none text-white"
+        style={{
+          fontFamily: "Galmuri11",
+          fontWeight: 700,
+          textShadow:
+            "0 0 6px rgba(255,255,255,0.9), 0 0 12px rgba(210,255,255,0.65)",
+        }}
+      >
+        <span>일</span>
+        <span>시</span>
+        <span>분</span>
+        <span>초</span>
+      </div>
+    </div>
+  );
+}
+
 function OnboardingCarousel({
   initialSlide = 0,
   className = "mt-4",
@@ -660,7 +759,6 @@ function OnboardingCarousel({
 }) {
   const [activeSlide, setActiveSlide] = useState(initialSlide);
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const slideRefs = useRef<Array<HTMLDivElement | null>>([]);
   const scrollTimerRef = useRef<number>();
 
   useEffect(() => {
@@ -672,10 +770,12 @@ function OnboardingCarousel({
   }, []);
 
   useEffect(() => {
-    slideRefs.current[activeSlide]?.scrollIntoView({
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+
+    scroller.scrollTo({
+      left: activeSlide * scroller.clientWidth,
       behavior: "smooth",
-      block: "nearest",
-      inline: "center",
     });
   }, [activeSlide]);
 
@@ -709,9 +809,6 @@ function OnboardingCarousel({
         {ONBOARDING_SLIDES.map((slide, index) => (
           <div
             key={slide}
-            ref={(element) => {
-              slideRefs.current[index] = element;
-            }}
             className="flex h-full w-full shrink-0 snap-center items-center justify-center"
             style={{ minWidth: "100%" }}
           >
@@ -1448,6 +1545,7 @@ function ClassicV2Version() {
   const [characterName, setCharacterName] = useState(sharedCtaName);
   const [isDragging, setIsDragging] = useState(false);
   const [generationError, setGenerationError] = useState("");
+  const [showImageGuide, setShowImageGuide] = useState(false);
   const [registrationView, setRegistrationView] = useState<
     "cta" | "complete" | null
   >(isSharedCta ? "cta" : null);
@@ -1622,19 +1720,59 @@ function ClassicV2Version() {
   }
 
   return (
-    <div className="min-h-[100dvh] w-full bg-[#628d38] flex justify-center relative overflow-hidden">
+    <div className="relative flex min-h-[100dvh] w-full flex-col items-center overflow-x-hidden bg-[#111111]">
       <style>{KEYFRAMES}</style>
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `url("${imgBgPattern}")`,
-          backgroundRepeat: "repeat",
-          backgroundSize: "361px",
-          opacity: 0.3,
-        }}
-      />
 
-      <main className="relative flex min-h-[100dvh] w-full max-w-[360px] flex-col justify-center px-[14px] pb-4 pt-[44px]">
+      <main
+        className="relative flex min-h-[100dvh] w-full max-w-[397px] flex-col items-center px-[14px] pb-4"
+        style={{
+          backgroundImage: `url("${imgIntroBg}")`,
+          backgroundPosition: "top center",
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "100% auto",
+        }}
+      >
+        <img
+          src={imgIntroHeader}
+          alt=""
+          className="-mx-[14px] block w-[calc(100%+28px)] max-w-none shrink-0"
+          draggable={false}
+        />
+        <div className="-mx-[14px] relative w-[calc(100%+28px)] max-w-none shrink-0">
+          <img
+            src={imgIntroHero}
+            alt=""
+            className="block w-full"
+            draggable={false}
+          />
+          <LaunchCountdownPanel />
+        </div>
+        <img
+          src={imgIntroEnjoyTitle}
+          alt=""
+          className="mt-[33.35px] block h-[34.19px] w-[236.99px] shrink-0"
+          draggable={false}
+        />
+        <OnboardingCarousel className="mt-[22.46px]" />
+        <img
+          src={imgIntroTryTitle}
+          alt=""
+          className="mt-[74.6px] block h-[33.43px] w-[206.59px] shrink-0"
+          draggable={false}
+        />
+        <img
+          src={imgIntroLimitedText}
+          alt=""
+          className="mt-[22.84px] mb-[2.34px] block h-[16px] w-[135px] shrink-0"
+          draggable={false}
+        />
+        <img
+          src={imgIntroRewardText}
+          alt=""
+          className="block h-[19px] w-[226px] shrink-0"
+          draggable={false}
+        />
+
         {phase !== "idle" && (
           <div className="mb-2 flex justify-center gap-2">
             {[1, 2, 3].map((step) => (
@@ -1651,30 +1789,28 @@ function ClassicV2Version() {
         )}
 
         {phase === "idle" && (
-          <div className="mx-auto w-[330.944px] max-w-full">
+          <div className="mx-auto mt-[18.79px] w-[330.944px] max-w-full">
             <WindowPanel>
-            <div className="flex h-[739px] flex-col items-center px-[25px] pt-0">
-              <div className="flex flex-col items-center gap-[14px]">
+            <div className="flex flex-col items-center px-[25px] pb-[28.6px] pt-0">
+              <div className="flex flex-col items-center gap-[4.57px]">
                 <p
-                  className="h-[13px] w-[53px] whitespace-nowrap text-center text-[13px] leading-[13px] tracking-[1.3px] text-[#628d38]"
+                  className="h-[13px] w-[53px] whitespace-nowrap text-center text-[11px] leading-[1.2] tracking-[1.1px] text-[#628d38]"
                   style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
                 >
                   STEP 01
                 </p>
                 <p
-                  className="flex h-[50px] w-[224px] items-center justify-center text-center text-[17px] leading-[1.4] tracking-[0.9px] text-[#32322d]"
+                  className="flex w-[224px] items-center justify-center text-center text-[18px] leading-[1.4] tracking-[0.9px] text-[#32322d]"
                   style={{
                     fontFamily: "Elice DX Neolli",
                     fontWeight: 500,
                   }}
                 >
-                  동물 사진을 업로드하면
-                  <br />
-                  캐릭터 카드를 발급해드려요
+                  동물 사진 업로드
                 </p>
               </div>
               <div
-                className="mt-[20.4px] flex flex-col items-center gap-[9.61px] text-center text-[10px] leading-none tracking-[0.35px] text-[#6a6a61]"
+                className="mt-[11.67px] flex flex-col items-center gap-[9.61px] text-center text-[10px] leading-none tracking-[0.35px] text-[#6a6a61]"
                 style={{
                   fontFamily: "Elice DX Neolli",
                   fontWeight: 300,
@@ -1683,6 +1819,19 @@ function ClassicV2Version() {
                 <p>최대한 얼굴과 몸이 잘 나온 사진을 올려주세요</p>
                 <p>저작권에 문제 없는 이미지를 사용해주세요</p>
               </div>
+              <button
+                type="button"
+                onClick={() => setShowImageGuide(true)}
+                className="mt-[18.79px] block h-[21px] w-[109.49px] shrink-0 select-none overflow-hidden transition-transform duration-100 ease-out active:translate-y-[1px] active:scale-[0.98]"
+                aria-label="이미지 가이드 보기"
+              >
+                <img
+                  src={imgIntroImageGuideButton}
+                  alt=""
+                  className="pointer-events-none h-full w-full object-fill"
+                  draggable={false}
+                />
+              </button>
 
               <input
                 ref={fileInputRef}
@@ -1699,7 +1848,7 @@ function ClassicV2Version() {
 
               <button
                 type="button"
-                className="relative mt-[27.3px] h-[240px] w-[240px] overflow-hidden rounded-[4px]"
+                className="relative mt-[10.79px] h-[240px] w-[240px] overflow-hidden rounded-[4px]"
                 style={{
                   background: "#f2ebdd",
                   border: isDragging
@@ -1740,7 +1889,6 @@ function ClassicV2Version() {
                       fontWeight: 500,
                     }}
                   >
-                    <span className="text-[28px] leading-none">+</span>
                     <span className="text-[10px] leading-[1.5] tracking-[0.4px]">
                       사진을 드래그하거나
                       <br />
@@ -1752,43 +1900,6 @@ function ClassicV2Version() {
                   </span>
                 )}
               </button>
-
-              <div className="my-[30px] flex w-full justify-center gap-[16px]">
-                {Array.from({ length: 9 }).map((_, index) => (
-                  <span
-                    key={index}
-                    className="h-px w-[10px] bg-[#e4d8c2]"
-                    aria-hidden="true"
-                  />
-                ))}
-              </div>
-
-              <p
-                className="h-[13px] w-[53px] whitespace-nowrap text-center text-[13px] leading-[13px] tracking-[1.3px] text-[#628d38]"
-                style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
-              >
-                STEP 02
-              </p>
-              <p
-                className="mt-[14px] text-center text-[18px] leading-[1.4] tracking-[0.9px] text-[#32322d]"
-                style={{
-                  fontFamily: "Elice DX Neolli",
-                  fontWeight: 500,
-                }}
-              >
-                이 캐릭터의 이름을
-                <br />
-                작성해주세요
-              </p>
-              <p
-                className="mt-5 text-center text-[10px] leading-[1.6] tracking-[0.35px] text-[#6a6a61]"
-                style={{
-                  fontFamily: "Elice DX Neolli",
-                  fontWeight: 300,
-                }}
-              >
-                아쉽게도 특수문자는 사용할 수 없어요
-              </p>
 
               <input
                 type="text"
@@ -1809,12 +1920,12 @@ function ClassicV2Version() {
                 }}
               />
 
-              <div className="mt-[22px]">
+              <div className="mt-[30.77px]">
                 <PixelButton
                   onClick={handleConvert}
                   disabled={!isButtonActive}
                   showPaw
-                  imageSrc={imgBtnChange}
+                  imageSrc={imgBtnLg}
                   ariaLabel="변환하기"
                 >
                   <span
@@ -1853,6 +1964,34 @@ function ClassicV2Version() {
         )}
       </main>
 
+      <footer className="relative w-full max-w-[397px] shrink-0">
+        <img
+          src={imgIntroFooter}
+          alt="POCHAKFARM footer"
+          className="block w-full"
+          draggable={false}
+        />
+        {[
+          { label: "인스타그램", target: "instagram", className: "left-[78.5%] top-[13.9%] h-[14%] w-[6.8%]" },
+          { label: "이메일", target: "email", className: "left-[87.8%] top-[13.9%] h-[14%] w-[6.8%]" },
+          { label: "이용약관", target: "terms", className: "left-[7.4%] top-[52.5%] h-[8.5%] w-[12.4%]" },
+          { label: "개인정보처리방침", target: "privacy", className: "left-[25.6%] top-[52.5%] h-[8.5%] w-[23.6%]" },
+          { label: "사전예약 이벤트 규약", target: "event_terms", className: "left-[55.1%] top-[52.5%] h-[8.5%] w-[28.3%]" },
+        ].map((link) => (
+          <button
+            key={link.target}
+            type="button"
+            aria-label={link.label}
+            className={`absolute cursor-pointer ${link.className}`}
+            onClick={() => {
+              trackEvent("intro_footer_link_clicked", {
+                target: link.target,
+              });
+            }}
+          />
+        ))}
+      </footer>
+
       {(phase === "dim" || phase === "result") &&
         uploadedImage && (
           <PackOpeningOverlay
@@ -1862,6 +2001,35 @@ function ClassicV2Version() {
             onRegister={() => setRegistrationView("cta")}
           />
         )}
+      {showImageGuide && (
+        <div
+          className="fixed inset-0 z-[240] flex items-center justify-center bg-black/55 px-4 py-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label="이미지 가이드"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 cursor-default"
+            aria-label="이미지 가이드 닫기"
+            onClick={() => setShowImageGuide(false)}
+          />
+          <div className="relative z-[1] w-full max-w-[330px]">
+            <img
+              src={imgImageGuideModal}
+              alt="이미지 가이드"
+              className="block w-full object-contain"
+              draggable={false}
+            />
+            <button
+              type="button"
+              className="absolute right-[4px] top-[4px] h-[44px] w-[44px]"
+              aria-label="이미지 가이드 닫기"
+              onClick={() => setShowImageGuide(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
