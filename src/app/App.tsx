@@ -9,10 +9,13 @@ import imgBtnSmall from "../assets/ui/btn-sm.png";
 import imgBtnSmall2 from "../assets/ui/btn-sm-2.png";
 import imgBtnSmall3 from "../assets/ui/btn-sm-3.png";
 import imgBtnLg from "../assets/ui/btn-lg.png";
-import imgBtnSave from "../assets/ui/btn-save.png";
+import imgBtnLgActive from "../assets/ui/btn-lg-active.png";
+import imgBtnNext from "../assets/ui/btn-next.png";
 import imgBtnShare from "../assets/ui/btn-share.png";
 import imgBtnAlrim from "../assets/ui/btn-alrim.png";
 import imgBtnNew from "../assets/ui/btn-new.png";
+import imgBtnOpenAlertLg from "../assets/ui/btn-open-alert-lg.png";
+import imgBtnBragLg from "../assets/ui/btn-brag-lg.png";
 import imgBtnContentRight from "../assets/ui/btn-contents-right2.png";
 import imgIntroBg from "../assets/ui/intro-bg.png";
 import imgIntroHeader from "../assets/ui/intro-header.png";
@@ -696,26 +699,21 @@ function LaunchCountdownPanel() {
       className="pointer-events-none absolute left-1/2 top-[65%] z-[2] w-[318px] max-w-[86%] -translate-x-1/2"
       aria-label={`출시까지 ${countdown.days}일 ${countdown.hours}시 ${countdown.minutes}분 ${countdown.seconds}초`}
     >
+      <div
+        className="absolute bottom-[18%] left-[9%] right-[9%] top-[20%] rounded-[12px] bg-white/[0.01]"
+        style={{
+          backdropFilter: "blur(5px)",
+          WebkitBackdropFilter: "blur(5px)",
+        }}
+      />
       <img
         src={imgIntroCountdownPanel}
         alt=""
-        className="block w-full"
+        className="relative z-[1] block w-full"
         draggable={false}
       />
       <div
-        className="absolute left-0 right-0 top-[18%] text-center text-[15px] leading-none text-white"
-        style={{
-          fontFamily: "Galmuri11",
-          fontWeight: 700,
-          letterSpacing: "0.38em",
-          textShadow:
-            "0 0 6px rgba(255,255,255,0.9), 0 0 14px rgba(210,255,255,0.65)",
-        }}
-      >
-        앞으로 출시까지
-      </div>
-      <div
-        className="absolute left-[15.5%] right-[15.5%] top-[43.5%] flex items-center justify-between text-center text-[23px] leading-none text-white"
+        className="absolute left-[15.5%] right-[15.5%] top-[45%] z-[2] flex items-center justify-between text-center text-[23px] leading-none text-white"
         style={{
           fontFamily: "Galmuri11",
           fontWeight: 700,
@@ -733,7 +731,7 @@ function LaunchCountdownPanel() {
         <span>{formatCountdownUnit(countdown.seconds)}</span>
       </div>
       <div
-        className="absolute left-[16%] right-[16%] top-[69%] grid grid-cols-4 text-center text-[11px] leading-none text-white"
+        className="absolute left-[16%] right-[16%] top-[70.5%] z-[2] grid grid-cols-4 text-center text-[11px] leading-none text-white"
         style={{
           fontFamily: "Galmuri11",
           fontWeight: 700,
@@ -1269,7 +1267,6 @@ function ResultOverlay({
   const dragStartX = useRef(0);
   const dragStartAng = useRef(0);
   const trackedCardInteractionRef = useRef(false);
-  const [showToast, setShowToast] = useState(false);
 
   const trackCardInteraction = useCallback((method: "mouse" | "touch") => {
     if (trackedCardInteractionRef.current) return;
@@ -1351,54 +1348,8 @@ function ResultOverlay({
     window.addEventListener("mouseup", onUp);
   };
 
-  const handleSave = useCallback(async () => {
-    trackEvent("card_save_clicked");
-
-    try {
-      await saveCardImage(assets.cardImage, characterName);
-      trackEvent("card_save_completed");
-    } catch (error) {
-      trackEvent("card_save_failed", {
-        message:
-          error instanceof Error ? error.message : "unknown_error",
-      });
-      window.alert(
-        error instanceof Error
-          ? error.message
-          : "이미지를 저장하지 못했어요.",
-      );
-    }
-  }, [assets.cardImage, characterName]);
-
-  const handleShare = useCallback(async () => {
-    trackEvent("result_share_clicked");
-    if (await copyShareLink(createCtaShareLink(characterName, assets.aiImage))) {
-      trackEvent("result_share_copied");
-      setShowToast(true);
-    }
-  }, [assets.aiImage, characterName]);
-
   return (
     <div className="absolute left-0 right-0 top-[93.19px] flex flex-col items-center w-full px-6">
-      {onRegister && (
-        <button
-          type="button"
-          onClick={() => {
-            trackEvent("cta_opened_from_result");
-            onRegister();
-          }}
-          className="fixed right-5 top-8 z-20 flex h-9 w-9 items-center justify-center text-[26px] leading-none text-white/95"
-          style={{
-            fontFamily: "Galmuri11",
-            fontWeight: 700,
-            textShadow: "0 2px 6px rgba(0,0,0,0.45)",
-          }}
-          aria-label="CTA 화면으로 이동"
-        >
-          ×
-        </button>
-      )}
-
       {/* Spotlight bg */}
       <div
         className="absolute inset-0 pointer-events-none opacity-0.1"
@@ -1467,64 +1418,56 @@ function ResultOverlay({
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
               transform: "rotateY(180deg)",
+              filter:
+                "drop-shadow(0 12px 32px rgba(0,0,0,0.7))",
             }}
           >
-            <img
-              src={assets.cardBackImage}
-              alt="카드 뒷면"
-              draggable={false}
+            <div
               style={{
+                position: "relative",
                 width: "283.66px",
                 height: "408.52px",
-                filter:
-                  "drop-shadow(0 12px 32px rgba(0,0,0,0.7))",
-                display: "block",
-                objectFit: "contain",
+                overflow: "hidden",
+                borderRadius: "14px",
                 pointerEvents: "none",
               }}
-            />
+            >
+              <img
+                src={assets.cardBackImage}
+                alt="카드 뒷면"
+                draggable={false}
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
+                  width: "292px",
+                  height: "420px",
+                  display: "block",
+                  objectFit: "fill",
+                  pointerEvents: "none",
+                  transform: "translate(-50%, -50%)",
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>
 
       <div className="mt-[65.35px] flex flex-col items-center gap-[6px]">
-        <PixelButton
-          onClick={handleSave}
-          showPaw
-          imageSrc={imgBtnSave}
-          ariaLabel="이미지 저장"
-        >
-          {false && (
-          <span
-            className="text-[16px] tracking-[1.4px] text-white text-center w-full"
-            style={{
-              fontFamily: "Elice DX Neolli",
-              fontWeight: 500,
-            }}
-          >
-            이미지 저장
-          </span>
-          )}
-        </PixelButton>
-
         {onRegister && (
-          <div className="pb-[2px]">
           <PixelButton
-            onClick={handleShare}
-            variant="secondary"
+            onClick={() => {
+              trackEvent("cta_opened_from_result");
+              onRegister();
+            }}
             showPaw
-            imageSrc={imgBtnShare}
-            ariaLabel="친구에게 공유하기"
+            imageSrc={imgBtnNext}
+            ariaLabel="다음으로"
           >
-            친구에게 공유하기
+            다음으로
           </PixelButton>
-          </div>
         )}
       </div>
-      <ToastNotification
-        visible={showToast}
-        onHidden={() => setShowToast(false)}
-      />
     </div>
   );
 }
@@ -1700,7 +1643,6 @@ function ClassicV2Version() {
       <CTAPage
         characterName={characterName.trim()}
         aiImage={generatedAssets?.aiImage ?? null}
-        onBack={() => setRegistrationView(null)}
         onComplete={() => setRegistrationView("complete")}
       />
     );
@@ -1925,7 +1867,7 @@ function ClassicV2Version() {
                   onClick={handleConvert}
                   disabled={!isButtonActive}
                   showPaw
-                  imageSrc={imgBtnLg}
+                  imageSrc={isButtonActive ? imgBtnLgActive : imgBtnLg}
                   ariaLabel="변환하기"
                 >
                   <span
@@ -2415,12 +2357,10 @@ function CTAPage({
   characterName,
   aiImage,
   onComplete,
-  onBack,
 }: {
   characterName: string;
   aiImage: string | null;
   onComplete: () => void;
-  onBack: () => void;
 }) {
   const [showDialog, setShowDialog] = useState(false);
   const [showToast, setShowToast] = useState(false);
@@ -2448,34 +2388,26 @@ function CTAPage({
   };
 
   return (
-    <div className="min-h-[100dvh] w-full bg-[#628d38] flex justify-center relative overflow-hidden">
+    <div className="relative flex min-h-[100dvh] w-full flex-col items-center overflow-x-hidden bg-[#111111]">
       <style>{KEYFRAMES}</style>
-      <div
-        className="absolute inset-0 pointer-events-none opacity-30"
+      <main
+        className="relative flex min-h-[100dvh] w-full max-w-[397px] flex-col items-center px-[14px] pb-[24px]"
         style={{
-          backgroundImage: `url("${imgBgPattern}")`,
-          backgroundRepeat: "repeat",
-          backgroundSize: "361px",
+          backgroundImage: `url("${imgIntroBg}")`,
+          backgroundPosition: "top center",
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "100% auto",
         }}
-      />
-      <button
-        type="button"
-        onClick={() => {
-          trackEvent("cta_back_to_result_clicked");
-          onBack();
-        }}
-        className="fixed right-5 top-8 z-20 flex h-9 w-9 items-center justify-center text-[26px] leading-none text-white/95"
-        style={{
-          fontFamily: "Galmuri11",
-          fontWeight: 700,
-          textShadow: "0 2px 6px rgba(0,0,0,0.45)",
-        }}
-        aria-label="결과 화면으로 돌아가기"
       >
-        ×
-      </button>
-      <main className="relative flex min-h-[100dvh] w-full max-w-[360px] flex-col justify-center px-[14px] pb-8 pt-[24px]">
-        <WindowPanel>
+        <img
+          src={imgIntroHeader}
+          alt=""
+          className="-mx-[14px] block w-[calc(100%+28px)] max-w-none shrink-0"
+          draggable={false}
+        />
+        <div className="flex w-full flex-1 items-center justify-center py-[24px]">
+        <div className="w-full max-w-[331px]">
+          <WindowPanel>
           <div className="flex flex-col items-center gap-4 px-6 pb-6 pt-[27px]">
             <div className="flex h-[80.4px] w-[211px] flex-col items-center justify-start text-center">
               <p
@@ -2494,29 +2426,21 @@ function CTAPage({
               </p>
             </div>
 
-            <div
-              className="relative h-[206px] w-[206px] rotate-[-4deg] rounded-[8px] border border-[#8d8a7d] bg-[#fbfaf3] p-[10px]"
-              style={{
-                boxShadow:
-                  "0 14px 24px rgba(65, 52, 35, 0.18), 0 2px 0 rgba(255,255,255,0.8) inset",
-              }}
-            >
-              <div className="absolute left-1/2 top-[-9px] h-[20px] w-[58px] -translate-x-1/2 rotate-[2deg] bg-[#e9db9f]/70" />
-              <div className="relative h-full w-full overflow-hidden rounded-[4px] border border-[#d2d0c1] bg-[#eef4e4]">
-                {aiImage ? (
-                  <img
-                    src={aiImage}
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                ) : (
-                  <img
-                    src={imgCharFront}
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                )}
+            <div className="relative h-[220px] w-[204px]">
+              <div className="absolute right-[10px] top-[6px] h-[206.02px] w-[143.05px] rotate-[9deg] overflow-hidden rounded-[7px]">
+                <img
+                  src={imgCardBack}
+                  alt=""
+                  className="absolute left-1/2 top-1/2 h-[211px] w-[147px] max-w-none -translate-x-1/2 -translate-y-1/2 object-fill"
+                  draggable={false}
+                />
               </div>
+              <img
+                src={aiImage || imgCharFront}
+                alt=""
+                className="absolute left-[13px] top-0 h-[206.02px] w-[143.05px] rotate-[-2deg] object-contain drop-shadow-[0_10px_14px_rgba(65,52,35,0.22)]"
+                draggable={false}
+              />
             </div>
 
             <button
@@ -2575,34 +2499,61 @@ function CTAPage({
               )}
             </div>
 
-            <PixelButton
-              onClick={() => {
-                setShowDialog(true);
-              }}
-              showPaw
-              imageSrc={imgBtnAlrim}
-              ariaLabel="오픈 알림 받기"
-            >
-              <span
-                className="w-full text-center text-[16px] tracking-[1.6px] text-white"
-                style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+            <div className="flex flex-col items-center gap-[7.09px]">
+              <PixelButton
+                onClick={() => {
+                  setShowDialog(true);
+                }}
+                showPaw
+                imageSrc={imgBtnOpenAlertLg}
+                ariaLabel="오픈 알림 받기"
               >
                 오픈 알림 받기
-              </span>
-            </PixelButton>
+              </PixelButton>
 
-            <PixelButton
-              onClick={handleShare}
-              variant="secondary"
-              showPaw
-              imageSrc={imgBtnShare}
-              ariaLabel="친구에게 공유하기"
-            >
-              친구에게 공유하기
-            </PixelButton>
+              <PixelButton
+                onClick={handleShare}
+                variant="secondary"
+                showPaw
+                imageSrc={imgBtnBragLg}
+                ariaLabel="친구에게 자랑하기"
+              >
+                친구에게 자랑하기
+              </PixelButton>
+            </div>
           </div>
-        </WindowPanel>
+          </WindowPanel>
+        </div>
+        </div>
       </main>
+
+      <footer className="relative w-full max-w-[397px] shrink-0">
+        <img
+          src={imgIntroFooter}
+          alt="POCHAKFARM footer"
+          className="block w-full"
+          draggable={false}
+        />
+        {[
+          { label: "인스타그램", target: "instagram", className: "left-[78.5%] top-[13.9%] h-[14%] w-[6.8%]" },
+          { label: "이메일", target: "email", className: "left-[87.8%] top-[13.9%] h-[14%] w-[6.8%]" },
+          { label: "이용약관", target: "terms", className: "left-[7.4%] top-[52.5%] h-[8.5%] w-[12.4%]" },
+          { label: "개인정보처리방침", target: "privacy", className: "left-[25.6%] top-[52.5%] h-[8.5%] w-[23.6%]" },
+          { label: "사전예약 이벤트 규약", target: "event_terms", className: "left-[55.1%] top-[52.5%] h-[8.5%] w-[28.3%]" },
+        ].map((link) => (
+          <button
+            key={link.target}
+            type="button"
+            aria-label={link.label}
+            className={`absolute cursor-pointer ${link.className}`}
+            onClick={() => {
+              trackEvent("cta_footer_link_clicked", {
+                target: link.target,
+              });
+            }}
+          />
+        ))}
+      </footer>
 
       <ToastNotification
         visible={showToast}
