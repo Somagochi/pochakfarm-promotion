@@ -127,8 +127,21 @@ const ONBOARDING_SLIDES = [
   "/assets/carousel4.png",
 ];
 const LAUNCH_TARGET_TIME = new Date("2026-08-01T00:00:00+09:00").getTime();
-const LOADING_ANIMAL_ICON = "/assets/loading-animal.png";
-const LOADING_WARNING_ICON = "/assets/warning.png";
+const CARD_PACK_OPEN_PROMPT_IMAGE = "/assets/card-pack-open-prompt.png";
+const CARD_PACK_FRONT_IMAGE = "/assets/card-pack-front.png";
+const CARD_PACK_BACK_IMAGE = "/assets/card-pack-back.png";
+const CARD_SELECT_FRONT_DELAYS = [
+  0, 500, 1000, 1500, 1998, 2500, 2998, 3497, 3998, 4497, 4996, 5493, 5996,
+  6750, 7500, 8250, 8993,
+];
+const CARD_SELECT_BACK_DELAYS = [
+  1300, 1800, 2300, 2798, 3298, 3800, 4297, 4800, 5300, 5797, 6300, 7050, 7800,
+  8550, 9300,
+];
+const SCAN_STAGE_DURATION_MS = 8000;
+const CARD_SELECT_STAGE_DURATION_MS = 10500;
+const PROCESSING_MIN_DURATION_MS =
+  SCAN_STAGE_DURATION_MS + CARD_SELECT_STAGE_DURATION_MS;
 
 const KEYFRAMES = `
   @keyframes float      { 0%,100%{transform:translateY(0)}   50%{transform:translateY(-10px)} }
@@ -136,6 +149,29 @@ const KEYFRAMES = `
   @keyframes spotlight  { 0%,100%{opacity:0.7}              50%{opacity:1} }
   @keyframes dogBreath  { 0%,100%{opacity:1}                50%{opacity:0.12} }
   @keyframes softPulse  { 0%,100%{transform:scale(1)}        50%{transform:scale(1.05)} }
+  @keyframes textShimmer { 0%{background-position:220% 0} 100%{background-position:-120% 0} }
+  @keyframes figmaScanY  { 0%{transform:translateY(122px)} 50%{transform:translateY(-122px)} 100%{transform:translateY(122px)} }
+  @keyframes scanGlow   { 0%,100%{opacity:.72} 50%{opacity:1} }
+  @keyframes cardFrontSweep {
+    0%{opacity:0;transform:translate3d(-210px,10px,0) rotate(5deg) scale(.6,.8)}
+    10%{opacity:.82}
+    48%{opacity:1;transform:translate3d(-8px,-8px,0) rotate(0deg) scale(1.08,1.15)}
+    90%{opacity:.82}
+    100%{opacity:0;transform:translate3d(210px,10px,0) rotate(-5deg) scale(.6,.8)}
+  }
+  @keyframes cardBackSweep {
+    0%{opacity:0;transform:translate3d(210px,26px,0) rotate(5deg) scale(.6,.8)}
+    10%{opacity:.22}
+    48%{opacity:.3;transform:translate3d(8px,4px,0) rotate(0deg) scale(.6,.6)}
+    90%{opacity:.22}
+    100%{opacity:0;transform:translate3d(-210px,26px,0) rotate(-5deg) scale(.6,.8)}
+  }
+  @keyframes cardFinalSelect {
+    0%{opacity:0;transform:translate3d(-210px,10px,0) rotate(5deg) scale(.6,.8)}
+    18%{opacity:.9}
+    58%{opacity:1;transform:translate3d(0,-8px,0) rotate(0deg) scale(1.08,1.15)}
+    100%{opacity:1;transform:translate3d(0,-8px,0) rotate(0deg) scale(1.52,1.62)}
+  }
 `;
 
 type Phase = "idle" | "processing" | "pack" | "dim" | "result";
@@ -906,116 +942,164 @@ function OnboardingCarousel({
   );
 }
 
-// ── ProcessingPanel — card pack inside window frame ───────────
-function ProcessingPanel() {
-  const [progress, setProgress] = useState(0);
-  useEffect(() => {
-    const DURATION = 22000;
-    const start = Date.now();
-    let rafId: number;
-    const tick = () => {
-      const p = Math.min((Date.now() - start) / DURATION, 0.95);
-      setProgress(p);
-      rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, []);
-
-  const loadingPercent = Math.min(95, Math.round(progress * 100));
+// ── ProcessingPanel — loading overlay ────────────────────────
+function ProcessingPanel({
+  uploadedImage,
+}: {
+  uploadedImage: string | null;
+}) {
+  const [loadingStage, setLoadingStage] = useState<"scan" | "card">("scan");
 
   return (
-    <div className="flex w-full flex-col items-center">
-      <WindowPanel>
-        <div className="flex min-h-[590px] flex-col items-center px-6 pb-5 pt-0">
-          <div className="flex w-full flex-col items-center">
-            <div
-              className="relative flex h-[82px] w-[92px] items-center justify-center"
-              style={{ animation: "softPulse 1.6s ease-in-out infinite" }}
-            >
-              <img
-                src={LOADING_ANIMAL_ICON}
-                alt=""
-                className="absolute h-[70px] w-[78px] object-contain opacity-20"
-                draggable={false}
-              />
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-6"
+      role="status"
+      aria-live="polite"
+      style={{
+        backdropFilter: "blur(5px)",
+        WebkitBackdropFilter: "blur(5px)",
+      }}
+    >
+      <div className="flex h-[640px] w-[330px] max-w-full flex-col items-center">
+        <div className="flex h-[118px] w-full flex-col items-center justify-start pt-[8px]">
+          <p
+            className="text-center text-[20px] tracking-[2px]"
+            style={{
+              fontFamily: "Galmuri11",
+              fontWeight: 700,
+              color: "transparent",
+              WebkitTextStroke: "1px rgba(255,255,255,0.45)",
+              backgroundImage:
+                "linear-gradient(90deg, rgba(242,235,221,0.42) 0%, #ffffff 42%, rgba(170,235,255,0.95) 50%, #ffffff 58%, rgba(242,235,221,0.42) 100%)",
+              backgroundClip: "text",
+              WebkitBackgroundClip: "text",
+              backgroundSize: "220% 100%",
+              animation: "textShimmer 1.7s linear infinite",
+              textShadow: "0 0 10px rgba(168,238,255,0.45)",
+            }}
+          >
+            {loadingStage === "scan" ? "ANALYZING..." : "Select..."}
+          </p>
+          <p
+            className="mt-[16px] text-center text-[14px] tracking-[0.4px] text-white"
+            style={{
+              fontFamily: "Elice DX Neolli",
+              fontWeight: 500,
+            }}
+          >
+            {loadingStage === "scan"
+              ? "사진 속 동물을 분석하고 있어요"
+              : "적합한 카드팩을 선정하고 있어요"}
+          </p>
+        </div>
+
+        <div className="relative flex h-[360px] w-full items-center justify-center overflow-hidden">
+          {loadingStage === "scan" ? (
+            <div className="relative h-[220px] w-[220px] overflow-visible">
+              <div className="absolute inset-0 z-0 overflow-hidden rounded-[8px]">
+                {uploadedImage && (
+                  <img
+                    src={uploadedImage}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                    draggable={false}
+                  />
+                )}
+              </div>
               <div
-                className="absolute h-[70px] w-[78px]"
+                className="pointer-events-none absolute inset-0 z-10 overflow-visible rounded-[8px]"
+                aria-label="변환 중 스캔 애니메이션"
+                onAnimationEnd={() => setLoadingStage("card")}
                 style={{
-                  clipPath: `inset(${100 - loadingPercent}% 0 0 0)`,
-                  transition: "clip-path 0.1s linear",
+                  animation:
+                    "figmaScanY 4s cubic-bezier(0.293,-0.245,0.652,1.123) 2",
                 }}
-                aria-hidden="true"
+              >
+                <div
+                  className="absolute left-1/2 top-1/2 h-[72px] w-[288px] -translate-x-1/2 rounded-[12px] bg-[#5f8f35]/45 blur-[10px]"
+                  style={{
+                    transform: "translate(-50%, 4px)",
+                  }}
+                />
+                <div
+                  className="absolute left-1/2 top-1/2 h-[10px] w-[288px] -translate-x-1/2 rounded-full bg-[#8fcd54]"
+                  style={{
+                    boxShadow:
+                      "0 0 12px rgba(143,205,84,0.95), 0 0 24px rgba(143,205,84,0.65)",
+                    animation: "scanGlow 1s ease-in-out infinite",
+                  }}
+                />
+              </div>
+              <div className="pointer-events-none absolute inset-0 z-20 rounded-[8px] ring-1 ring-white/45" />
+            </div>
+          ) : (
+            <>
+              {CARD_SELECT_BACK_DELAYS.map((delay, index) => (
+                <div
+                  key={`card-back-${delay}-${index}`}
+                  className="absolute left-1/2 top-[112px] z-0 h-[157px] w-[117px]"
+                  aria-hidden="true"
+                  style={{
+                    animation: `cardBackSweep 1500ms cubic-bezier(0.25,0.46,0.45,0.94) ${delay}ms 1 both`,
+                    marginLeft: "-58.5px",
+                    transformOrigin: "50% 50%",
+                  }}
+                >
+                  <img
+                    src={CARD_PACK_BACK_IMAGE}
+                    alt=""
+                    className="h-full w-full object-contain"
+                    draggable={false}
+                  />
+                </div>
+              ))}
+              {uploadedImage && (
+                <img
+                  src={uploadedImage}
+                  alt=""
+                  className="absolute left-1/2 top-[26px] z-10 h-[176px] w-[176px] -translate-x-1/2 rounded-[8px] object-cover"
+                  draggable={false}
+                />
+              )}
+              {CARD_SELECT_FRONT_DELAYS.map((delay, index) => (
+                <div
+                  key={`card-front-${delay}-${index}`}
+                  className="absolute left-1/2 top-[96px] z-20 h-[157px] w-[117px]"
+                  aria-hidden="true"
+                  style={{
+                    animation: `cardFrontSweep 1500ms cubic-bezier(0.25,0.46,0.45,0.94) ${delay}ms 1 both`,
+                    marginLeft: "-58.5px",
+                    transformOrigin: "50% 50%",
+                  }}
+                >
+                  <img
+                    src={CARD_PACK_FRONT_IMAGE}
+                    alt=""
+                    className="h-full w-full object-contain"
+                    draggable={false}
+                  />
+                </div>
+              ))}
+              <div
+                className="absolute left-1/2 top-[96px] z-30 h-[157px] w-[117px]"
+                aria-label="선택된 카드팩"
+                style={{
+                  animation:
+                    "cardFinalSelect 1200ms cubic-bezier(0.25,0.46,0.45,0.94) 9300ms 1 both",
+                  marginLeft: "-58.5px",
+                  transformOrigin: "50% 50%",
+                }}
               >
                 <img
-                  src={LOADING_ANIMAL_ICON}
+                  src={CARD_PACK_FRONT_IMAGE}
                   alt=""
-                  className="absolute h-[70px] w-[78px] object-contain"
+                  className="h-full w-full object-contain"
                   draggable={false}
                 />
               </div>
-              <span
-                className="relative z-10 rounded-full bg-[#faf5eb]/85 px-2 py-1 text-[12px] tracking-[0.6px] text-[#36501e]"
-                style={{
-                  fontFamily: "Galmuri11",
-                  fontWeight: 700,
-                  boxShadow: "0 1px 0 rgba(104,85,62,0.18)",
-                }}
-              >
-                {loadingPercent}%
-              </span>
-            </div>
-
-            <p
-              className="mt-[19.94px] text-center text-[10px] tracking-[1.1px] text-[#628d38]"
-              style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
-            >
-              ANALIZING...
-            </p>
-            <p
-              className="mt-[6.35px] text-center text-[18px] leading-[1.35] tracking-[0.7px] text-[#32322d]"
-              style={{
-                fontFamily: "Elice DX Neolli",
-                fontWeight: 500,
-              }}
-            >
-              동물을 분석하고 있어요
-            </p>
-            <div
-              className="mt-[19.94px] flex min-h-[48px] flex-col items-center gap-[9.61px] px-3 text-center text-[10px] leading-none tracking-[0.35px] text-[#8f7755]"
-              style={{
-                fontFamily: "Elice DX Neolli",
-                fontWeight: 300,
-              }}
-            >
-              <p className="text-[10px] text-[#6A6A61]">실제 앱에서는 더 빠르고 재밌있게</p>
-              <p className="text-[10px] text-[#6A6A61]">포착할 수 있는 기능들을 만나볼 수 있어요</p>
-              <span className="text-[8px] text-[#BFBFB6]">
-                *웹사이트를 종료하더라도 변환은 유지돼요
-              </span>
-            </div>
-          </div>
-
-          <OnboardingCarousel className="mt-[33.81px]" />
+            </>
+          )}
         </div>
-      </WindowPanel>
-      <div className="mt-3 flex w-full items-center justify-center gap-[6px]">
-        <img
-          src={LOADING_WARNING_ICON}
-          alt=""
-          className="h-[24px] w-[24px] shrink-0 object-contain"
-          draggable={false}
-        />
-        <p
-          className="whitespace-nowrap text-left text-[8px] mt-2 leading-none text-[#f2ebdd]"
-          style={{
-            fontFamily: "Elice DX Neolli",
-            fontWeight: 500,
-            textShadow: "0 1px 0 rgba(54,80,30,0.5)",
-          }}
-        >
-          새로고침하면 작업이 중단될 수 있습니다. 잠시만 기다려 주세요.
-        </p>
       </div>
     </div>
   );
@@ -1084,50 +1168,132 @@ function PixelGeneratingModal() {
 // ── CardPackPanel — tap to open ───────────────────────────────
 function CardPackPanel({ onOpen }: { onOpen: () => void }) {
   return (
-    <WindowPanel>
-      <div className="flex min-h-[590px] flex-col items-center px-6 pb-5 pt-0">
-        <div className="flex w-full flex-col items-center">
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-6"
+      role="dialog"
+      aria-modal="true"
+      aria-label="완성된 카드팩"
+      style={{
+        backdropFilter: "blur(5px)",
+        WebkitBackdropFilter: "blur(5px)",
+      }}
+    >
+      <div className="flex h-[640px] w-[330px] max-w-full flex-col items-center">
+        <div className="flex h-[118px] w-full flex-col items-center justify-start pt-[2px]">
           <p
-            className="text-center text-[13px] tracking-[1.4px] text-[#628d38]"
-            style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
+            className="text-center text-[34px] leading-none tracking-[1.2px]"
+            style={{
+              fontFamily: "Galmuri11",
+              fontWeight: 700,
+              color: "transparent",
+              WebkitTextStroke: "1px rgba(255,255,255,0.65)",
+              backgroundImage:
+                "linear-gradient(90deg, rgba(255,255,255,0.45) 0%, #ffffff 42%, rgba(170,235,255,0.95) 50%, #ffffff 58%, rgba(255,255,255,0.45) 100%)",
+              backgroundClip: "text",
+              WebkitBackgroundClip: "text",
+              backgroundSize: "220% 100%",
+              animation: "textShimmer 1.7s linear infinite",
+              textShadow: "0 0 10px rgba(168,238,255,0.55)",
+            }}
           >
-            CARD PACK READY!
+            Card Pack Ready
           </p>
-
+          <img
+            src={CARD_PACK_OPEN_PROMPT_IMAGE}
+            alt="완성된 카드팩을 클릭해 열어보세요"
+            className="mt-[18px] h-auto w-[270px] max-w-full object-contain"
+            draggable={false}
+          />
+        </div>
+        <div className="relative flex h-[360px] w-full items-center justify-center overflow-visible">
           <button
             type="button"
             onClick={onOpen}
-            className="mt-5 cursor-pointer"
-            style={{
-              animation: "float 1.8s ease-in-out infinite",
-            }}
+            className="block cursor-pointer focus:outline-none"
             aria-label="카드팩 열기"
           >
-            <img
-              src={imgCardPack}
-              alt="카드팩"
-              className="drop-shadow-2xl"
-              style={{
-                width: "184px",
-                animation: "wobble 2.2s ease-in-out infinite",
-              }}
-            />
+            <RotatingCardPack />
           </button>
-
-          <p
-            className="mt-5 text-center text-[12px] tracking-[0.45px] text-[#8f7755]"
-            style={{
-              fontFamily: "Elice DX Neolli",
-              fontWeight: 500,
-            }}
-          >
-            탭해서 카드팩을 열어보세요!
-          </p>
         </div>
-
-        <OnboardingCarousel initialSlide={2} />
       </div>
-    </WindowPanel>
+    </div>
+  );
+}
+
+function RotatingCardPack() {
+  const [angle, setAngle] = useState(0);
+  const rafRef = useRef<number>();
+  const lastTimeRef = useRef<number>();
+
+  useEffect(() => {
+    const spin = (time: number) => {
+      if (lastTimeRef.current !== undefined) {
+        setAngle((prev) => prev + (time - lastTimeRef.current!) * 0.045);
+      }
+      lastTimeRef.current = time;
+      rafRef.current = requestAnimationFrame(spin);
+    };
+    rafRef.current = requestAnimationFrame(spin);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  return (
+    <div
+      className="relative h-[280px] w-[208px]"
+      style={{
+        perspective: "900px",
+        filter: "drop-shadow(0 18px 28px rgba(0,0,0,0.45))",
+      }}
+    >
+      <div
+        className="relative h-full w-full"
+        style={{
+          transformStyle: "preserve-3d",
+          transform: `rotateY(${angle}deg)`,
+        }}
+      >
+        {[3, 6, 9, 12].map((depth) => (
+          <img
+            key={depth}
+            src={CARD_PACK_FRONT_IMAGE}
+            alt=""
+            className="absolute inset-0 h-full w-full object-contain opacity-25"
+            draggable={false}
+            style={{
+              transform: `translateZ(${depth - 14}px)`,
+              filter: "brightness(0.72) saturate(0.9)",
+              backfaceVisibility: "hidden",
+              WebkitBackfaceVisibility: "hidden",
+            }}
+            aria-hidden="true"
+          />
+        ))}
+        <img
+          src={CARD_PACK_FRONT_IMAGE}
+          alt=""
+          className="absolute inset-0 h-full w-full object-contain"
+          draggable={false}
+          style={{
+            transform: "translateZ(14px)",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+          }}
+        />
+        <img
+          src={CARD_PACK_BACK_IMAGE}
+          alt=""
+          className="absolute inset-0 h-full w-full object-contain"
+          draggable={false}
+          style={{
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+            transform: "rotateY(180deg) translateZ(14px)",
+          }}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -1656,6 +1822,13 @@ function ClassicV2Version() {
 
   const handleConvert = useCallback(async () => {
     if (!isButtonActive) return;
+    const processingStartedAt = Date.now();
+    const waitForProcessingMinimum = () => {
+      const remainingMs =
+        PROCESSING_MIN_DURATION_MS - (Date.now() - processingStartedAt);
+      if (remainingMs <= 0) return Promise.resolve();
+      return new Promise((resolve) => window.setTimeout(resolve, remainingMs));
+    };
     trackEvent("convert_started", {
       name_length: characterName.trim().length,
       is_preview: isPreviewMode,
@@ -1665,7 +1838,7 @@ function ClassicV2Version() {
     setPhase("processing");
 
     if (isPreviewMode) {
-      await new Promise((resolve) => window.setTimeout(resolve, 1400));
+      await waitForProcessingMinimum();
       setGeneratedAssets(FALLBACK_CARD_ASSETS);
       setPhase("pack");
       trackEvent("convert_completed", {
@@ -1697,6 +1870,7 @@ function ClassicV2Version() {
         return;
       }
       setGeneratedAssets(getGeneratedCardAssets(payload));
+      await waitForProcessingMinimum();
       setPhase("pack");
       trackEvent("convert_completed", {
         mode: "api",
@@ -1814,7 +1988,7 @@ function ClassicV2Version() {
           draggable={false}
         />
 
-        {phase !== "idle" && (
+        {phase !== "idle" && phase !== "processing" && phase !== "pack" && (
           <div className="mb-2 flex justify-center gap-2">
             {[1, 2, 3].map((step) => (
               <div
@@ -1829,7 +2003,7 @@ function ClassicV2Version() {
           </div>
         )}
 
-        {phase === "idle" && (
+        {(phase === "idle" || phase === "processing" || phase === "pack") && (
           <div className="mx-auto mt-[18.79px] w-[330.944px] max-w-full">
             <WindowPanel>
             <div className="flex flex-col items-center px-[25px] pb-[28.6px] pt-0">
@@ -1991,7 +2165,7 @@ function ClassicV2Version() {
         )}
 
         {phase === "processing" && (
-          <ProcessingPanel />
+          <ProcessingPanel uploadedImage={uploadedImage} />
         )}
 
         {phase === "pack" && (
