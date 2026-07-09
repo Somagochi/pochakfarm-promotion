@@ -797,7 +797,7 @@ function IntroHeader({ onHome }: { onHome: () => void }) {
       />
       <button
         type="button"
-        className="absolute left-[4.5%] top-[24%] h-[50%] w-[28%]"
+        className="absolute left-[4.5%] top-[24%] h-[50%] w-[28%] cursor-pointer"
         aria-label="첫 화면으로 이동"
         onClick={onHome}
       />
