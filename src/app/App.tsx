@@ -82,7 +82,6 @@ const SHARE_BUTTON_FRAME_FILTER =
 type GeneratedCardAssets = {
   cardImage: string;
   cardBackImage: string;
-  aiImage: string;
 };
 
 function formatApiErrorPayload(payload: unknown) {
@@ -116,7 +115,6 @@ function formatApiErrorPayload(payload: unknown) {
 const FALLBACK_CARD_ASSETS: GeneratedCardAssets = {
   cardImage: imgCharFront,
   cardBackImage: imgCardBack,
-  aiImage: imgCharFront,
 };
 
 const ONBOARDING_SLIDES = [
@@ -183,7 +181,7 @@ async function copyShareLink(url = window.location.href) {
   }
 }
 
-function createCtaShareLink(_characterName: string, _aiImage: string | null) {
+function createCtaShareLink(_characterName: string) {
   const url = new URL(window.location.pathname || "/", window.location.origin);
   return url.toString();
 }
@@ -1475,15 +1473,12 @@ function ResultOverlay({
 function ClassicV2Version() {
   const searchParams = new URLSearchParams(window.location.search);
   const sharedCtaName = searchParams.get("name") || "";
-  const sharedCtaImage = searchParams.get("aiImage") || "";
   const isSharedCta = searchParams.get("cta") === "1";
   const [phase, setPhase] = useState<Phase>("idle");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [generatedAssets, setGeneratedAssets] =
     useState<GeneratedCardAssets | null>(
-      sharedCtaImage
-        ? { ...FALLBACK_CARD_ASSETS, aiImage: sharedCtaImage }
-        : null,
+      isSharedCta ? FALLBACK_CARD_ASSETS : null,
     );
   const [characterName, setCharacterName] = useState(sharedCtaName);
   const [isDragging, setIsDragging] = useState(false);
@@ -1585,19 +1580,19 @@ function ClassicV2Version() {
         setPhase("idle");
         return;
       }
+      const resultData =
+        payload && typeof payload === "object" && "data" in payload
+          ? (payload.data as Record<string, unknown> | null)
+          : null;
       setGeneratedAssets({
         cardImage:
-          typeof payload.cardImage === "string"
-            ? payload.cardImage
+          typeof resultData?.resultImageUrl === "string"
+            ? resultData.resultImageUrl
             : FALLBACK_CARD_ASSETS.cardImage,
         cardBackImage:
-          typeof payload.cardBackImage === "string"
-            ? payload.cardBackImage
+          typeof resultData?.cardBackImageUrl === "string"
+            ? resultData.cardBackImageUrl
             : FALLBACK_CARD_ASSETS.cardBackImage,
-        aiImage:
-          typeof payload.aiImage === "string"
-            ? payload.aiImage
-            : FALLBACK_CARD_ASSETS.aiImage,
       });
       setPhase("pack");
       trackEvent("convert_completed", {
@@ -1642,7 +1637,8 @@ function ClassicV2Version() {
     return (
       <CTAPage
         characterName={characterName.trim()}
-        aiImage={generatedAssets?.aiImage ?? null}
+        cardImage={generatedAssets?.cardImage ?? null}
+        cardBackImage={generatedAssets?.cardBackImage ?? null}
         onComplete={() => setRegistrationView("complete")}
       />
     );
@@ -1651,12 +1647,9 @@ function ClassicV2Version() {
   if (registrationView === "complete") {
     return (
       <CompletePage
-        aiImage={generatedAssets?.aiImage ?? null}
+        cardImage={generatedAssets?.cardImage ?? null}
         onCreateNew={handleReset}
-        shareUrl={createCtaShareLink(
-          characterName.trim(),
-          generatedAssets?.aiImage ?? null,
-        )}
+        shareUrl={createCtaShareLink(characterName.trim())}
       />
     );
   }
@@ -2355,11 +2348,13 @@ function EarlyRegistrationDialog({
 
 function CTAPage({
   characterName,
-  aiImage,
+  cardImage,
+  cardBackImage,
   onComplete,
 }: {
   characterName: string;
-  aiImage: string | null;
+  cardImage: string | null;
+  cardBackImage: string | null;
   onComplete: () => void;
 }) {
   const [showDialog, setShowDialog] = useState(false);
@@ -2368,13 +2363,14 @@ function CTAPage({
   useEffect(() => {
     trackEvent("cta_page_viewed", {
       has_character_name: !!characterName,
-      has_ai_image: !!aiImage,
+      has_card_image: !!cardImage,
+      has_card_back_image: !!cardBackImage,
     });
-  }, [aiImage, characterName]);
+  }, [cardBackImage, cardImage, characterName]);
 
   const handleShare = async () => {
     trackEvent("cta_share_clicked");
-    if (await copyShareLink(createCtaShareLink(characterName, aiImage))) {
+    if (await copyShareLink(createCtaShareLink(characterName))) {
       trackEvent("cta_share_copied");
       setShowToast(true);
     }
@@ -2382,7 +2378,7 @@ function CTAPage({
 
   const handleImageSave = async () => {
     try {
-      await saveCardImage(aiImage || imgCharFront, characterName || "pixel-animal");
+      await saveCardImage(cardImage || imgCharFront, characterName || "pixel-animal");
     } catch {
     }
   };
@@ -2429,14 +2425,14 @@ function CTAPage({
             <div className="relative h-[220px] w-[204px]">
               <div className="absolute right-[10px] top-[6px] h-[206.02px] w-[143.05px] rotate-[9deg] overflow-hidden rounded-[7px]">
                 <img
-                  src={imgCardBack}
+                  src={cardBackImage || imgCardBack}
                   alt=""
                   className="absolute left-1/2 top-1/2 h-[211px] w-[147px] max-w-none -translate-x-1/2 -translate-y-1/2 object-fill"
                   draggable={false}
                 />
               </div>
               <img
-                src={aiImage || imgCharFront}
+                src={cardImage || imgCharFront}
                 alt=""
                 className="absolute left-[13px] top-0 h-[206.02px] w-[143.05px] rotate-[-2deg] object-contain drop-shadow-[0_10px_14px_rgba(65,52,35,0.22)]"
                 draggable={false}
@@ -2574,11 +2570,11 @@ function CTAPage({
 }
 
 function CompletePage({
-  aiImage,
+  cardImage,
   onCreateNew,
   shareUrl,
 }: {
-  aiImage: string | null;
+  cardImage: string | null;
   onCreateNew: () => void;
   shareUrl: string;
 }) {
@@ -2636,7 +2632,7 @@ function CompletePage({
               <div className="absolute left-1/2 top-[-11px] h-[22px] w-[68px] -translate-x-1/2 rotate-[2deg] bg-[#ecdca2]/80" />
               <div className="relative h-full w-full overflow-hidden rounded-[4px] border border-[#d2d0c1] bg-[#eef4e4]">
                 <img
-                  src={aiImage || imgCharFront}
+                  src={cardImage || imgCharFront}
                   alt=""
                   className="absolute inset-0 h-full w-full object-cover"
                   draggable={false}
