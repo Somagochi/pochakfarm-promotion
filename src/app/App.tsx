@@ -786,6 +786,25 @@ function LaunchCountdownPanel() {
   );
 }
 
+function IntroHeader({ onHome }: { onHome: () => void }) {
+  return (
+    <div className="-mx-[14px] relative w-[calc(100%+28px)] max-w-none shrink-0">
+      <img
+        src={imgIntroHeader}
+        alt=""
+        className="block w-full max-w-none"
+        draggable={false}
+      />
+      <button
+        type="button"
+        className="absolute left-[4.5%] top-[24%] h-[50%] w-[28%]"
+        aria-label="첫 화면으로 이동"
+        onClick={onHome}
+      />
+    </div>
+  );
+}
+
 function OnboardingCarousel({
   initialSlide = 0,
   className = "mt-4",
@@ -1695,6 +1714,11 @@ function ClassicV2Version() {
   }, []);
 
   const handleReset = useCallback(() => {
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname || "/",
+    );
     setPhase("idle");
     setUploadedImage(null);
     setGeneratedAssets(null);
@@ -1743,12 +1767,7 @@ function ClassicV2Version() {
           backgroundSize: "100% auto",
         }}
       >
-        <img
-          src={imgIntroHeader}
-          alt=""
-          className="-mx-[14px] block w-[calc(100%+28px)] max-w-none shrink-0"
-          draggable={false}
-        />
+        <IntroHeader onHome={handleReset} />
         <div className="-mx-[14px] relative w-[calc(100%+28px)] max-w-none shrink-0">
           <img
             src={imgIntroHero}
@@ -2479,12 +2498,7 @@ function CTAPage({
           backgroundSize: "100% auto",
         }}
       >
-        <img
-          src={imgIntroHeader}
-          alt=""
-          className="-mx-[14px] block w-[calc(100%+28px)] max-w-none shrink-0"
-          draggable={false}
-        />
+        <IntroHeader onHome={onCreateNew} />
         <div className="flex w-full flex-1 items-center justify-center py-[24px]">
         <div className="w-full max-w-[331px]">
           <WindowPanel>
@@ -2596,11 +2610,6 @@ function CTAPage({
                   isSharedEntry
                     ? () => {
                         trackEvent("shared_cta_create_clicked");
-                        window.history.replaceState(
-                          null,
-                          "",
-                          window.location.pathname || "/",
-                        );
                         onCreateNew();
                       }
                     : handleShare
