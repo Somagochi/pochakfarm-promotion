@@ -2,7 +2,10 @@ import { createServer } from "node:http";
 import { createReadStream, existsSync, readFileSync } from "node:fs";
 import { extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createClassicV2CardAssets } from "./classic-v2-card.mjs";
+import {
+  createClassicV2CardAssets,
+  getClassicV2CardAssets,
+} from "./classic-v2-card.mjs";
 import {
   downloadImage,
   getDownloadFilename,
@@ -37,6 +40,18 @@ const server = createServer(async (req, res) => {
         await handleClassicV2Card(req, res);
       } else {
         sendMethodNotAllowed(res);
+      }
+      return;
+    }
+
+    const characterizationMatch = pathname.match(
+      /^\/api\/characterizations\/([^/]+)$/,
+    );
+    if (characterizationMatch) {
+      if (req.method === "GET") {
+        await handleGetCharacterization(req, res, characterizationMatch[1]);
+      } else {
+        sendMethodNotAllowed(res, "GET");
       }
       return;
     }
@@ -111,6 +126,27 @@ async function handleClassicV2Card(req, res) {
         error instanceof Error
           ? error.message
           : "카드 이미지 생성 중 오류가 발생했어요.",
+    });
+  }
+}
+
+async function handleGetCharacterization(req, res, characterizationId) {
+  try {
+    const payload = await getClassicV2CardAssets(
+      decodeURIComponent(characterizationId),
+      process.env,
+      {
+        cookie: req.headers.cookie || "",
+        onSetCookie: (setCookie) => res.setHeader("Set-Cookie", setCookie),
+      },
+    );
+    sendJson(res, 200, payload);
+  } catch (error) {
+    sendJson(res, error.status || 500, {
+      error:
+        error instanceof Error
+          ? error.message
+          : "공유 카드 조회 중 오류가 발생했어요.",
     });
   }
 }
@@ -211,4 +247,3 @@ function sendMethodNotAllowed(res, allow = "POST") {
   });
   res.end(JSON.stringify({ error: "Method Not Allowed" }));
 }
-
