@@ -201,15 +201,19 @@ function getGeneratedCardAssets(payload: unknown): GeneratedCardAssets {
       ? (record.data as Record<string, unknown>)
       : {};
   const characterizationId =
-    typeof data.characterization_id === "string"
-      ? data.characterization_id
-      : typeof record.characterization_id === "string"
-        ? record.characterization_id
-        : typeof data.characterizationId === "string"
-          ? data.characterizationId
-          : typeof record.characterizationId === "string"
-            ? record.characterizationId
-            : "";
+    typeof data.characterizationId === "string"
+      ? data.characterizationId
+      : typeof data.characterizationId === "number"
+        ? String(data.characterizationId)
+        : typeof record.characterizationId === "string"
+          ? record.characterizationId
+          : typeof record.characterizationId === "number"
+            ? String(record.characterizationId)
+            : typeof data.characterization_id === "string"
+              ? data.characterization_id
+              : typeof record.characterization_id === "string"
+                ? record.characterization_id
+                : "";
 
   return {
     cardImage:
@@ -654,7 +658,7 @@ function WindowPanel({
           className="absolute inset-0 size-full object-fill pointer-events-none"
         />
       </div>
-      <div className="relative -mt-px w-full overflow-hidden shrink-0">
+      <div className="relative -mt-[2px] w-full overflow-hidden shrink-0">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <img
             src={imgModalWindowMiddle}
@@ -665,7 +669,7 @@ function WindowPanel({
         <div className="relative z-10">{children}</div>
       </div>
       <div
-        className="relative w-full shrink-0 overflow-hidden"
+        className="relative -mt-[2px] w-full shrink-0 overflow-hidden"
         style={{ aspectRatio: "331 / 39" }}
       >
         <img
@@ -1574,13 +1578,19 @@ function ClassicV2Version() {
 
     async function loadSharedCharacterization() {
       try {
-        const response = await fetch(
-          `/api/characterizations/${encodeURIComponent(sharedCharacterizationId)}`,
-          {
-            method: "GET",
-            credentials: "include",
-          },
+        const url = new URL(
+          "/api/characterizations/public",
+          window.location.origin,
         );
+        url.searchParams.set(
+          "characterization_id",
+          sharedCharacterizationId,
+        );
+
+        const response = await fetch(url.toString(), {
+          method: "GET",
+          credentials: "include",
+        });
         const payload = await response.json();
         if (isCancelled) return;
 
@@ -1822,13 +1832,7 @@ function ClassicV2Version() {
           <div className="mx-auto mt-[18.79px] w-[330.944px] max-w-full">
             <WindowPanel>
             <div className="flex flex-col items-center px-[25px] pb-[28.6px] pt-0">
-              <div className="flex flex-col items-center gap-[4.57px]">
-                <p
-                  className="h-[13px] w-[53px] whitespace-nowrap text-center text-[11px] leading-[1.2] tracking-[1.1px] text-[#628d38]"
-                  style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
-                >
-                  STEP 01
-                </p>
+              <div className="flex flex-col items-center">
                 <p
                   className="flex w-[224px] items-center justify-center text-center text-[18px] leading-[1.4] tracking-[0.9px] text-[#32322d]"
                   style={{
