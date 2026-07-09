@@ -16,6 +16,7 @@ import imgBtnAlrim from "../assets/ui/btn-alrim.png";
 import imgBtnNew from "../assets/ui/btn-new.png";
 import imgBtnOpenAlertLg from "../assets/ui/btn-open-alert-lg.png";
 import imgBtnBragLg from "../assets/ui/btn-brag-lg.png";
+import imgBtnCaptureTooLg from "../assets/ui/btn-capture-too-lg.png";
 import imgBtnContentRight from "../assets/ui/btn-contents-right2.png";
 import imgIntroBg from "../assets/ui/intro-bg.png";
 import imgIntroHeader from "../assets/ui/intro-header.png";
@@ -82,6 +83,7 @@ const SHARE_BUTTON_FRAME_FILTER =
 type GeneratedCardAssets = {
   cardImage: string;
   cardBackImage: string;
+  characterizationId?: string;
 };
 
 function formatApiErrorPayload(payload: unknown) {
@@ -181,9 +183,47 @@ async function copyShareLink(url = window.location.href) {
   }
 }
 
-function createCtaShareLink(_characterName: string) {
+function createCtaShareLink(characterizationId?: string | null) {
   const url = new URL(window.location.pathname || "/", window.location.origin);
+  if (characterizationId) {
+    url.searchParams.set("characterization_id", characterizationId);
+  }
   return url.toString();
+}
+
+function getGeneratedCardAssets(payload: unknown): GeneratedCardAssets {
+  const record =
+    payload && typeof payload === "object"
+      ? (payload as Record<string, unknown>)
+      : {};
+  const data =
+    record.data && typeof record.data === "object"
+      ? (record.data as Record<string, unknown>)
+      : {};
+  const characterizationId =
+    typeof data.characterization_id === "string"
+      ? data.characterization_id
+      : typeof record.characterization_id === "string"
+        ? record.characterization_id
+        : typeof data.characterizationId === "string"
+          ? data.characterizationId
+          : typeof record.characterizationId === "string"
+            ? record.characterizationId
+            : "";
+
+  return {
+    cardImage:
+      typeof data.resultImageUrl === "string"
+        ? data.resultImageUrl
+        : FALLBACK_CARD_ASSETS.cardImage,
+    cardBackImage:
+      typeof data.cardBackImageUrl === "string"
+        ? data.cardBackImageUrl
+        : FALLBACK_CARD_ASSETS.cardBackImage,
+    ...(characterizationId
+      ? { characterizationId }
+      : {}),
+  };
 }
 
 function getCardDownloadName(characterName: string) {
@@ -1473,7 +1513,10 @@ function ResultOverlay({
 function ClassicV2Version() {
   const searchParams = new URLSearchParams(window.location.search);
   const sharedCtaName = searchParams.get("name") || "";
-  const isSharedCta = searchParams.get("cta") === "1";
+  const sharedCharacterizationId =
+    searchParams.get("characterization_id") || "";
+  const isSharedCta =
+    searchParams.get("cta") === "1" || !!sharedCharacterizationId;
   const [phase, setPhase] = useState<Phase>("idle");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [generatedAssets, setGeneratedAssets] =
@@ -1504,6 +1547,49 @@ function ClassicV2Version() {
       phase,
     });
   }, [phase]);
+
+  useEffect(() => {
+    if (!sharedCharacterizationId) return;
+
+    let isCancelled = false;
+
+    async function loadSharedCharacterization() {
+      try {
+        const response = await fetch(
+          `/api/characterizations/${encodeURIComponent(sharedCharacterizationId)}`,
+          {
+            method: "GET",
+            credentials: "include",
+          },
+        );
+        const payload = await response.json();
+        if (isCancelled) return;
+
+        if (!response.ok) {
+          trackEvent("shared_characterization_load_failed", {
+            message: formatApiErrorPayload(payload),
+          });
+          return;
+        }
+
+        setGeneratedAssets(getGeneratedCardAssets(payload));
+        trackEvent("shared_characterization_loaded");
+      } catch (error) {
+        if (isCancelled) return;
+
+        trackEvent("shared_characterization_load_failed", {
+          message:
+            error instanceof Error ? error.message : "unknown_error",
+        });
+      }
+    }
+
+    loadSharedCharacterization();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [sharedCharacterizationId]);
 
   const readFile = useCallback(async (file: File) => {
     if (!ACCEPTED_TYPES.has(file.type)) {
@@ -1580,20 +1666,7 @@ function ClassicV2Version() {
         setPhase("idle");
         return;
       }
-      const resultData =
-        payload && typeof payload === "object" && "data" in payload
-          ? (payload.data as Record<string, unknown> | null)
-          : null;
-      setGeneratedAssets({
-        cardImage:
-          typeof resultData?.resultImageUrl === "string"
-            ? resultData.resultImageUrl
-            : FALLBACK_CARD_ASSETS.cardImage,
-        cardBackImage:
-          typeof resultData?.cardBackImageUrl === "string"
-            ? resultData.cardBackImageUrl
-            : FALLBACK_CARD_ASSETS.cardBackImage,
-      });
+      setGeneratedAssets(getGeneratedCardAssets(payload));
       setPhase("pack");
       trackEvent("convert_completed", {
         mode: "api",
@@ -1639,6 +1712,9 @@ function ClassicV2Version() {
         characterName={characterName.trim()}
         cardImage={generatedAssets?.cardImage ?? null}
         cardBackImage={generatedAssets?.cardBackImage ?? null}
+        characterizationId={generatedAssets?.characterizationId ?? null}
+        isSharedEntry={!!sharedCharacterizationId}
+        onCreateNew={handleReset}
         onComplete={() => setRegistrationView("complete")}
       />
     );
@@ -1649,7 +1725,7 @@ function ClassicV2Version() {
       <CompletePage
         cardImage={generatedAssets?.cardImage ?? null}
         onCreateNew={handleReset}
-        shareUrl={createCtaShareLink(characterName.trim())}
+        shareUrl={createCtaShareLink(generatedAssets?.characterizationId)}
       />
     );
   }
@@ -2350,11 +2426,17 @@ function CTAPage({
   characterName,
   cardImage,
   cardBackImage,
+  characterizationId,
+  isSharedEntry,
+  onCreateNew,
   onComplete,
 }: {
   characterName: string;
   cardImage: string | null;
   cardBackImage: string | null;
+  characterizationId: string | null;
+  isSharedEntry: boolean;
+  onCreateNew: () => void;
   onComplete: () => void;
 }) {
   const [showDialog, setShowDialog] = useState(false);
@@ -2365,12 +2447,14 @@ function CTAPage({
       has_character_name: !!characterName,
       has_card_image: !!cardImage,
       has_card_back_image: !!cardBackImage,
+      has_characterization_id: !!characterizationId,
+      is_shared_entry: isSharedEntry,
     });
-  }, [cardBackImage, cardImage, characterName]);
+  }, [cardBackImage, cardImage, characterName, characterizationId, isSharedEntry]);
 
   const handleShare = async () => {
     trackEvent("cta_share_clicked");
-    if (await copyShareLink(createCtaShareLink(characterName))) {
+    if (await copyShareLink(createCtaShareLink(characterizationId))) {
       trackEvent("cta_share_copied");
       setShowToast(true);
     }
@@ -2508,13 +2592,25 @@ function CTAPage({
               </PixelButton>
 
               <PixelButton
-                onClick={handleShare}
+                onClick={
+                  isSharedEntry
+                    ? () => {
+                        trackEvent("shared_cta_create_clicked");
+                        window.history.replaceState(
+                          null,
+                          "",
+                          window.location.pathname || "/",
+                        );
+                        onCreateNew();
+                      }
+                    : handleShare
+                }
                 variant="secondary"
                 showPaw
-                imageSrc={imgBtnBragLg}
-                ariaLabel="친구에게 자랑하기"
+                imageSrc={isSharedEntry ? imgBtnCaptureTooLg : imgBtnBragLg}
+                ariaLabel={isSharedEntry ? "나도 포착하기" : "친구에게 자랑하기"}
               >
-                친구에게 자랑하기
+                {isSharedEntry ? "나도 포착하기" : "친구에게 자랑하기"}
               </PixelButton>
             </div>
           </div>
