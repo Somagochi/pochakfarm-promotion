@@ -123,38 +123,35 @@ async function readResponseJson(response) {
 
 function normalizeCardAssets(payload) {
   const data = payload && typeof payload.data === "object" ? payload.data : {};
-  const cardImage = normalizeImage(
+  const resultImageUrl = normalizeImage(
     payload.cardImage ||
       payload.card_image ||
       payload.card ||
       data.resultImageUrl,
   );
-  const cardBackImage = normalizeImage(
+  const cardBackImageUrl = normalizeImage(
     payload.cardBackImage ||
       payload.card_back_image ||
       payload.cardBack ||
       data.cardBackImageUrl,
   );
-  const aiImage = normalizeImage(
-    data.aiImageUrl ||
-      payload.aiImage ||
-      payload.ai_image ||
-      payload.frameImage ||
-      payload.frame_image ||
-      payload.frame,
-  );
 
-  if (!cardImage || !cardBackImage || !aiImage) {
+  if (!resultImageUrl || !cardBackImageUrl) {
     throw httpError(
       502,
-      "카드 이미지 서버 응답에 aiImageUrl, resultImageUrl, cardBackImageUrl이 모두 필요해요.",
+      "카드 이미지 서버 응답에 resultImageUrl, cardBackImageUrl이 모두 필요해요.",
     );
   }
 
   return {
-    cardImage,
-    cardBackImage,
-    aiImage,
+    data: {
+      resultImageUrl,
+      cardBackImageUrl,
+    },
+    datetime:
+      typeof payload.datetime === "string"
+        ? payload.datetime
+        : new Date().toISOString(),
   };
 }
 
