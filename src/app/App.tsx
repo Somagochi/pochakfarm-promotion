@@ -4,6 +4,7 @@
   useEffect,
   useCallback,
 } from "react";
+import { XIcon } from "lucide-react";
 import { trackEvent } from "../analytics";
 import imgBtnSmall from "../assets/ui/btn-sm.png";
 import imgBtnSmall2 from "../assets/ui/btn-sm-2.png";
@@ -2048,19 +2049,25 @@ function ClassicV2Version() {
             aria-label="이미지 가이드 닫기"
             onClick={() => setShowImageGuide(false)}
           />
-          <div className="relative z-[1] w-full max-w-[330px]">
+          <div className="relative z-[1] w-full max-w-[330px] overflow-hidden rounded-[8px]">
             <img
               src={imgImageGuideModal}
               alt="이미지 가이드"
               className="block w-full object-contain"
               draggable={false}
             />
+            <div
+              className="absolute right-0 top-0 z-[2] h-[76px] w-[76px] bg-[#eee7d8]"
+              aria-hidden="true"
+            />
             <button
               type="button"
-              className="absolute right-[4px] top-[4px] h-[44px] w-[44px]"
+              className="absolute right-[12px] top-[12px] z-[3] flex h-[44px] w-[44px] items-center justify-center text-[#9d9b91]"
               aria-label="이미지 가이드 닫기"
               onClick={() => setShowImageGuide(false)}
-            />
+            >
+              <XIcon className="h-[24px] w-[24px]" strokeWidth={3} />
+            </button>
           </div>
         </div>
       )}
