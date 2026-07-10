@@ -56,7 +56,6 @@ import imgCornerBR from "../imports/2200포착-7/38b961cc3cce7fcaa6c20191eb62363
 // Sliced card-pack pieces
 import imgCardPackTop from "../assets/ui/card-pack-top.png";
 import imgCardPackBottom from "../assets/ui/card-pack-bottom.png";
-import imgCardSkyGold from "../assets/ui/card-sky-gold.png";
 
 // Dog pixel-art SVG component (inline JSX — avoids SVG file import issues)
 import FigmaDog from "../imports/Frame427322333/index";
@@ -117,6 +116,18 @@ function formatApiErrorPayload(payload: unknown) {
   );
 }
 
+function getApiErrorMessage(payload: unknown) {
+  if (typeof payload === "string") return payload;
+  if (!payload || typeof payload !== "object") {
+    return String(payload ?? "요청에 실패했어요.");
+  }
+
+  const record = payload as Record<string, unknown>;
+  if (typeof record.message === "string") return record.message;
+  if (typeof record.error === "string") return record.error;
+  return JSON.stringify(payload, null, 2);
+}
+
 const FALLBACK_CARD_ASSETS: GeneratedCardAssets = {
   cardImage: imgCharFront,
   cardBackImage: imgCardBack,
@@ -133,12 +144,13 @@ const CARD_PACK_OPEN_PROMPT_IMAGE = "/assets/card-pack-open-prompt.png";
 const CARD_PACK_FRONT_IMAGE = "/assets/card-pack-front.png";
 const CARD_PACK_BACK_IMAGE = "/assets/card-pack-back.png";
 const CARD_SELECT_FRONT_DELAYS = [
-  0, 500, 1000, 1500, 1998, 2500, 2998, 3497, 3998, 4497, 4996, 5493, 5996,
-  6750, 7500, 8250, 8993,
+  0, 500, 1000, 1500, 1998.798, 2500, 2998.798, 3497.596, 3998.798,
+  4497.596, 4996.394, 5493.988, 5996.394, 6750, 7500, 8250,
 ];
+const CARD_SELECT_FRONT_NEIGHBOR_DELAY = 8993.739;
 const CARD_SELECT_BACK_DELAYS = [
-  1300, 1800, 2300, 2798, 3298, 3800, 4297, 4800, 5300, 5797, 6300, 7050, 7800,
-  8550, 9300,
+  1300, 1800, 2300, 2798.798, 3298.798, 3800, 4297.596, 4800, 5300,
+  5797.596, 6300, 7050, 7800, 8550, 9300,
 ];
 const SCAN_STAGE_DURATION_MS = 8000;
 const CARD_SELECT_STAGE_DURATION_MS = 10500;
@@ -154,25 +166,21 @@ const KEYFRAMES = `
   @keyframes textShimmer { 0%{background-position:220% 0} 100%{background-position:-120% 0} }
   @keyframes figmaScanY  { 0%{transform:translateY(122px)} 50%{transform:translateY(-122px)} 100%{transform:translateY(122px)} }
   @keyframes scanGlow   { 0%,100%{opacity:.72} 50%{opacity:1} }
+  @keyframes circularLoader { to{transform:rotate(360deg)} }
   @keyframes cardFrontSweep {
-    0%{opacity:0;transform:translate3d(-210px,10px,0) rotate(5deg) scale(.6,.8)}
-    10%{opacity:.82}
-    48%{opacity:1;transform:translate3d(-8px,-8px,0) rotate(0deg) scale(1.08,1.15)}
-    90%{opacity:.82}
-    100%{opacity:0;transform:translate3d(210px,10px,0) rotate(-5deg) scale(.6,.8)}
+    0%{opacity:.8;transform:translate3d(-277px,-27px,0) rotate(5deg) scale(.6,.8)}
+    50%{opacity:1;transform:translate3d(0,0,0) rotate(0deg) scale(1.5)}
+    100%{opacity:.8;transform:translate3d(278px,-27px,0) rotate(-5deg) scale(.6,.8)}
   }
   @keyframes cardBackSweep {
-    0%{opacity:0;transform:translate3d(210px,26px,0) rotate(5deg) scale(.6,.8)}
-    10%{opacity:.22}
-    48%{opacity:.3;transform:translate3d(8px,4px,0) rotate(0deg) scale(.6,.6)}
-    90%{opacity:.22}
-    100%{opacity:0;transform:translate3d(-210px,26px,0) rotate(-5deg) scale(.6,.8)}
+    0%{opacity:.2;transform:translate3d(278px,30px,0) rotate(5deg) scale(.6,.8)}
+    50%{opacity:.3;transform:translate3d(0,0,0) rotate(0deg) scale(.6)}
+    100%{opacity:.2;transform:translate3d(-277px,30px,0) rotate(-5deg) scale(.6,.8)}
   }
-  @keyframes cardFinalSelect {
-    0%{opacity:0;transform:translate3d(-210px,10px,0) rotate(5deg) scale(.6,.8)}
-    18%{opacity:.9}
-    58%{opacity:1;transform:translate3d(0,-8px,0) rotate(0deg) scale(1.08,1.15)}
-    100%{opacity:1;transform:translate3d(0,-8px,0) rotate(0deg) scale(1.52,1.62)}
+  @keyframes cardFrontFinal {
+    0%{opacity:.8;transform:translate3d(-277px,-27px,0) rotate(5deg) scale(.6,.8)}
+    61.7%{opacity:1;transform:translate3d(0,0,0) rotate(0deg) scale(1.5)}
+    100%{opacity:1;transform:translate3d(0,0,0) rotate(0deg) scale(1.522)}
   }
   @keyframes packReadyMotion {
     0%{transform:translate(0,0) rotate(0deg) scale(1)}
@@ -236,6 +244,7 @@ const KEYFRAMES = `
 `;
 
 type Phase = "idle" | "processing" | "pack" | "dim" | "result";
+type ConversionStatus = "idle" | "pending" | "success" | "error";
 
 function getLaunchCountdown() {
   const remainingSeconds = Math.max(
@@ -836,7 +845,7 @@ function LaunchCountdownPanel() {
 
   return (
     <div
-      className="pointer-events-none absolute left-1/2 top-[65%] z-[2] w-[318px] max-w-[86%] -translate-x-1/2"
+      className="pointer-events-none absolute bottom-[48.29px] left-1/2 z-[2] w-[318px] max-w-[86%] -translate-x-1/2"
       aria-label={`출시까지 ${countdown.days}일 ${countdown.hours}시 ${countdown.minutes}분 ${countdown.seconds}초`}
     >
       <div
@@ -918,6 +927,7 @@ function OnboardingCarousel({
   const scrollerRef = useRef<HTMLDivElement>(null);
   const scrollRafRef = useRef<number>();
   const autoPlayTimerRef = useRef<number>();
+  const programmaticSlideRef = useRef<number | null>(null);
 
   const restartAutoPlay = useCallback(() => {
     if (autoPlayTimerRef.current) {
@@ -945,6 +955,7 @@ function OnboardingCarousel({
     const scroller = scrollerRef.current;
     if (!scroller) return;
 
+    programmaticSlideRef.current = activeSlide;
     scroller.scrollTo({
       left: activeSlide * scroller.clientWidth,
       behavior: "smooth",
@@ -961,11 +972,25 @@ function OnboardingCarousel({
 
     scrollRafRef.current = window.requestAnimationFrame(() => {
       const slides = Array.from(scroller.children) as HTMLElement[];
+      const programmaticSlide = programmaticSlideRef.current;
+      if (programmaticSlide !== null) {
+        const targetScrollLeft = programmaticSlide * scroller.clientWidth;
+        if (Math.abs(scroller.scrollLeft - targetScrollLeft) < 2) {
+          programmaticSlideRef.current = null;
+        }
+        return;
+      }
+
+      const firstSlideOffset = slides[0]?.offsetLeft ?? 0;
       const nextSlide = slides.reduce((closestIndex, slide, index) => {
         const closestDistance = Math.abs(
-          slides[closestIndex].offsetLeft - scroller.scrollLeft,
+          slides[closestIndex].offsetLeft -
+            firstSlideOffset -
+            scroller.scrollLeft,
         );
-        const currentDistance = Math.abs(slide.offsetLeft - scroller.scrollLeft);
+        const currentDistance = Math.abs(
+          slide.offsetLeft - firstSlideOffset - scroller.scrollLeft,
+        );
         return currentDistance < closestDistance ? index : closestIndex;
       }, 0);
       setActiveSlide(
@@ -979,7 +1004,10 @@ function OnboardingCarousel({
       <div
         ref={scrollerRef}
         onScroll={handleScroll}
-        onPointerDown={restartAutoPlay}
+        onPointerDown={() => {
+          programmaticSlideRef.current = null;
+          restartAutoPlay();
+        }}
         className={`${className} mx-auto flex h-[291px] w-[264px] snap-x snap-mandatory overflow-x-auto scroll-smooth`}
         style={{
           scrollbarWidth: "none",
@@ -1045,7 +1073,7 @@ function ProcessingPanel({
         WebkitBackdropFilter: "blur(5px)",
       }}
     >
-      <div className="flex h-[640px] w-[330px] max-w-full flex-col items-center">
+      <div className="flex h-[640px] w-[330px] max-w-full translate-y-[24px] flex-col items-center">
         <div className="flex h-[118px] w-full flex-col items-center justify-start pt-[8px]">
           <p
             className="text-center text-[20px] tracking-[2px]"
@@ -1120,23 +1148,19 @@ function ProcessingPanel({
           ) : (
             <>
               {CARD_SELECT_BACK_DELAYS.map((delay, index) => (
-                <div
-                  key={`card-back-${delay}-${index}`}
-                  className="absolute left-1/2 top-[104px] z-0 h-[173px] w-[129px]"
+                <img
+                  key={`card-back-${delay}`}
+                  src={CARD_PACK_BACK_IMAGE}
+                  alt=""
+                  className="pointer-events-none absolute left-1/2 top-[91px] z-0 h-[157px] w-[117px] object-contain"
+                  draggable={false}
                   aria-hidden="true"
                   style={{
-                    animation: `cardBackSweep 1500ms cubic-bezier(0.25,0.46,0.45,0.94) ${delay}ms 1 both`,
-                    marginLeft: "-64.5px",
-                    transformOrigin: "50% 50%",
+                    marginLeft: "-58.5px",
+                    animation: `cardBackSweep 1500ms linear ${delay}ms both`,
+                    filter: `drop-shadow(0 ${4 + (index % 3) * 2}px 8px rgba(0,0,0,.18))`,
                   }}
-                >
-                  <img
-                    src={CARD_PACK_BACK_IMAGE}
-                    alt=""
-                    className="h-full w-full object-contain"
-                    draggable={false}
-                  />
-                </div>
+                />
               ))}
               {uploadedImage && (
                 <img
@@ -1147,41 +1171,44 @@ function ProcessingPanel({
                 />
               )}
               {CARD_SELECT_FRONT_DELAYS.map((delay, index) => (
-                <div
-                  key={`card-front-${delay}-${index}`}
-                  className="absolute left-1/2 top-[88px] z-20 h-[173px] w-[129px]"
-                  aria-hidden="true"
-                  style={{
-                    animation: `cardFrontSweep 1500ms cubic-bezier(0.25,0.46,0.45,0.94) ${delay}ms 1 both`,
-                    marginLeft: "-64.5px",
-                    transformOrigin: "50% 50%",
-                  }}
-                >
-                  <img
-                    src={CARD_PACK_FRONT_IMAGE}
-                    alt=""
-                    className="h-full w-full object-contain"
-                    draggable={false}
-                  />
-                </div>
-              ))}
-              <div
-                className="absolute left-1/2 top-[88px] z-30 h-[173px] w-[129px]"
-                aria-label="선택된 카드팩"
-                style={{
-                  animation:
-                    "cardFinalSelect 1200ms cubic-bezier(0.25,0.46,0.45,0.94) 9300ms 1 both",
-                  marginLeft: "-64.5px",
-                  transformOrigin: "50% 50%",
-                }}
-              >
                 <img
+                  key={`card-front-${delay}`}
                   src={CARD_PACK_FRONT_IMAGE}
                   alt=""
-                  className="h-full w-full object-contain"
+                  className="pointer-events-none absolute left-1/2 top-[102px] z-20 h-[157px] w-[117px] object-contain"
                   draggable={false}
+                  aria-hidden="true"
+                  style={{
+                    marginLeft: "-58.5px",
+                    animation: `cardFrontSweep 1500ms linear ${delay}ms both`,
+                    filter: `drop-shadow(0 ${7 + (index % 3) * 2}px 10px rgba(0,0,0,.28))`,
+                  }}
                 />
-              </div>
+              ))}
+              <img
+                src={CARD_PACK_FRONT_IMAGE}
+                alt=""
+                className="pointer-events-none absolute left-1/2 top-[102px] z-30 h-[157px] w-[117px] object-contain"
+                draggable={false}
+                aria-hidden="true"
+                style={{
+                  marginLeft: "-58.5px",
+                  animation: `cardFrontFinal 1506.261ms linear ${CARD_SELECT_FRONT_NEIGHBOR_DELAY}ms both`,
+                  filter: "drop-shadow(0 10px 12px rgba(0,0,0,.32))",
+                }}
+              />
+              <img
+                src={CARD_PACK_FRONT_IMAGE}
+                alt=""
+                className="pointer-events-none absolute left-1/2 top-[102px] z-20 h-[157px] w-[117px] object-contain"
+                draggable={false}
+                aria-hidden="true"
+                style={{
+                  marginLeft: "-58.5px",
+                  animation: `cardFrontSweep 1500ms linear ${CARD_SELECT_FRONT_NEIGHBOR_DELAY}ms both`,
+                  filter: "drop-shadow(0 8px 10px rgba(0,0,0,.28))",
+                }}
+              />
             </>
           )}
         </div>
@@ -1251,8 +1278,20 @@ function PixelGeneratingModal() {
 }
 
 // ── CardPackPanel — tap to open ───────────────────────────────
-function CardPackPanel({ onOpen }: { onOpen: () => void }) {
-  const [stage, setStage] = useState<"ready" | "cut">("ready");
+function CardPackPanel({
+  isReady,
+  onOpen,
+}: {
+  isReady: boolean;
+  onOpen: () => void;
+}) {
+  const [stage, setStage] = useState<"ready" | "cut" | "waiting">("ready");
+
+  useEffect(() => {
+    if (stage === "waiting" && isReady) {
+      onOpen();
+    }
+  }, [isReady, onOpen, stage]);
 
   return (
     <div
@@ -1265,7 +1304,7 @@ function CardPackPanel({ onOpen }: { onOpen: () => void }) {
         WebkitBackdropFilter: "blur(5px)",
       }}
     >
-      <div className="flex h-[640px] w-[330px] max-w-full flex-col items-center">
+      <div className="flex h-[640px] w-[330px] max-w-full translate-y-[24px] flex-col items-center">
         <div className="flex h-[118px] w-full flex-col items-center justify-start pt-[2px]">
           <p
             className="text-center text-[34px] leading-none tracking-[1.2px]"
@@ -1293,12 +1332,19 @@ function CardPackPanel({ onOpen }: { onOpen: () => void }) {
               draggable={false}
               style={{ animation: "packPromptMotion 10s linear infinite" }}
             />
-          ) : (
+          ) : stage === "cut" ? (
             <p
               className="mt-[18px] text-center text-[15px] leading-[1.5] tracking-[.4px] text-white"
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
             >
               절취선을 따라 옆으로 밀어주세요
+            </p>
+          ) : (
+            <p
+              className="mt-[18px] text-center text-[14px] tracking-[.4px] text-white"
+              style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+            >
+              카드 생성을 마무리하고 있어요
             </p>
           )}
         </div>
@@ -1315,8 +1361,33 @@ function CardPackPanel({ onOpen }: { onOpen: () => void }) {
             >
               <ReadyCardPack />
             </button>
+          ) : stage === "cut" ? (
+            <CuttableCardPack
+              onCut={() => {
+                if (isReady) {
+                  onOpen();
+                  return;
+                }
+                trackEvent("card_pack_waiting_for_response");
+                setStage("waiting");
+              }}
+            />
           ) : (
-            <CuttableCardPack onCut={onOpen} />
+            <div
+              className="flex h-[280px] w-[208px] items-center justify-center"
+              role="status"
+              aria-label="카드 생성 응답 대기 중"
+            >
+              <span
+                className="block h-[58px] w-[58px] rounded-full border-[6px] border-white/20 border-t-[#9fe1ff]"
+                style={{
+                  animation: "circularLoader 800ms linear infinite",
+                  boxShadow:
+                    "0 0 14px rgba(159,225,255,.55), inset 0 0 10px rgba(159,225,255,.18)",
+                }}
+                aria-hidden="true"
+              />
+            </div>
           )}
         </div>
       </div>
@@ -1456,7 +1527,7 @@ function PackOpeningOverlay({ characterName, assets, onResult, onRegister }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/75 backdrop-blur-[6px]">
       <div className="pointer-events-none absolute inset-0 opacity-50" style={{ background: "radial-gradient(ellipse 70% 50% at 50% 55%, rgba(98,141,56,.45), transparent 70%)" }} />
       {openingScene === "pack" ? (
-        <div className="relative flex h-[560px] w-[330px] items-center justify-center" aria-label="카드팩 개봉 중">
+        <div className="relative flex h-[560px] w-[330px] translate-y-[24px] items-center justify-center" aria-label="카드팩 개봉 중">
           {particles.map((particle, index) => (
             <span
               key={index}
@@ -1482,7 +1553,7 @@ function PackOpeningOverlay({ characterName, assets, onResult, onRegister }: {
                 src={assets.cardBackImage}
                 alt=""
                 draggable={false}
-                className="block w-full opacity-0 drop-shadow-2xl"
+                className="block w-full rounded-[8px] opacity-0 drop-shadow-2xl"
                 style={{
                   animation: `revealCardLaunch 800ms cubic-bezier(.5,0,.5,1) ${delay}ms 1 both`,
                   "--start-x": startX,
@@ -1533,6 +1604,7 @@ function PackOpeningOverlay({ characterName, assets, onResult, onRegister }: {
         </div>
       ) : openingScene === "sky" ? (
         <CardSkyScene
+          cardBackImage={assets.cardBackImage}
           onSelect={(cardIndex) => {
             trackEvent("card_sky_selected", { card_index: cardIndex + 1 });
             setOpeningScene("result");
@@ -1546,7 +1618,13 @@ function PackOpeningOverlay({ characterName, assets, onResult, onRegister }: {
   );
 }
 
-function CardSkyScene({ onSelect }: { onSelect: (cardIndex: number) => void }) {
+function CardSkyScene({
+  cardBackImage,
+  onSelect,
+}: {
+  cardBackImage: string;
+  onSelect: (cardIndex: number) => void;
+}) {
   const [canSelect, setCanSelect] = useState(false);
   const cards = [
     { delay: 0, x: "17.82%", y: "50%" },
@@ -1563,7 +1641,7 @@ function CardSkyScene({ onSelect }: { onSelect: (cardIndex: number) => void }) {
 
   return (
     <div
-      className="relative h-[464px] w-[330px] max-w-[92vw] overflow-hidden"
+      className="relative h-[464px] w-[330px] max-w-[92vw] translate-y-[24px] overflow-hidden"
       aria-label={canSelect ? "카드 한 장을 선택하세요" : "카드가 하늘에 펼쳐지는 중"}
     >
       <div
@@ -1588,10 +1666,10 @@ function CardSkyScene({ onSelect }: { onSelect: (cardIndex: number) => void }) {
           } as React.CSSProperties}
         >
           <img
-            src={imgCardSkyGold}
+            src={cardBackImage}
             alt=""
             draggable={false}
-            className={`block w-full select-none transition-[transform,filter] duration-200 ease-out ${
+            className={`block w-full select-none rounded-[8px] transition-[transform,filter] duration-200 ease-out ${
               canSelect
                 ? "group-hover:-translate-y-2 group-hover:scale-110 group-hover:brightness-110 group-hover:drop-shadow-[0_0_20px_rgba(255,220,80,.95)] group-focus-visible:-translate-y-2 group-focus-visible:scale-110 group-focus-visible:brightness-110 group-focus-visible:drop-shadow-[0_0_20px_rgba(255,220,80,.95)] group-active:scale-105"
                 : ""
@@ -1720,7 +1798,7 @@ function ResultOverlay({
   };
 
   return (
-    <div className="absolute left-0 right-0 top-[93.19px] flex flex-col items-center w-full px-6">
+    <div className="absolute left-0 right-0 top-[117.19px] flex flex-col items-center w-full px-6">
       {/* Spotlight bg */}
       <div
         className="absolute inset-0 pointer-events-none opacity-0.1"
@@ -1761,8 +1839,13 @@ function ResultOverlay({
           {/* Front face — visible at 0°/360° */}
           <div
             style={{
+              position: "absolute",
+              inset: 0,
+              overflow: "hidden",
+              borderRadius: "16px",
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
+              transform: "translateZ(0.1px)",
             }}
           >
             <img
@@ -1775,7 +1858,8 @@ function ResultOverlay({
                 filter:
                   "drop-shadow(0 12px 32px rgba(0,0,0,0.7))",
                 display: "block",
-                objectFit: "contain",
+                objectFit: "cover",
+                borderRadius: "16px",
                 pointerEvents: "none",
               }}
             />
@@ -1788,7 +1872,7 @@ function ResultOverlay({
               inset: 0,
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
-              transform: "rotateY(180deg)",
+              transform: "rotateY(180deg) translateZ(0.1px)",
               filter:
                 "drop-shadow(0 12px 32px rgba(0,0,0,0.7))",
             }}
@@ -1799,7 +1883,7 @@ function ResultOverlay({
                 width: "283.66px",
                 height: "408.52px",
                 overflow: "hidden",
-                borderRadius: "14px",
+                borderRadius: "16px",
                 pointerEvents: "none",
               }}
             >
@@ -1811,10 +1895,11 @@ function ResultOverlay({
                   position: "absolute",
                   left: "50%",
                   top: "50%",
-                  width: "292px",
-                  height: "420px",
+                  width: "100%",
+                  height: "100%",
                   display: "block",
-                  objectFit: "fill",
+                  objectFit: "cover",
+                  borderRadius: "16px",
                   pointerEvents: "none",
                   transform: "translate(-50%, -50%)",
                 }}
@@ -1860,6 +1945,10 @@ function ClassicV2Version() {
   const [nameError, setNameError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [generationError, setGenerationError] = useState("");
+  const [conversionStatus, setConversionStatus] =
+    useState<ConversionStatus>("idle");
+  const [showGenerationErrorModal, setShowGenerationErrorModal] =
+    useState(false);
   const [showImageGuide, setShowImageGuide] = useState(false);
   const [registrationView, setRegistrationView] = useState<
     "cta" | "complete" | null
@@ -1898,6 +1987,18 @@ function ClassicV2Version() {
       root.style.overscrollBehavior = previousRootStyles.overscrollBehavior;
     };
   }, [isTransformationOverlayOpen]);
+
+  useEffect(() => {
+    if (phase !== "processing") return;
+
+    const timer = window.setTimeout(() => {
+      setPhase((currentPhase) =>
+        currentPhase === "processing" ? "pack" : currentPhase,
+      );
+    }, PROCESSING_MIN_DURATION_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [phase]);
 
   useEffect(() => {
     trackEvent("page_viewed", {
@@ -1969,6 +2070,7 @@ function ClassicV2Version() {
       file_size_kb: Math.round(file.size / 1024),
     });
     setGenerationError("");
+    setShowGenerationErrorModal(false);
 
     try {
       setUploadedImage(await createUploadPreview(file));
@@ -1992,25 +2094,19 @@ function ClassicV2Version() {
 
   const handleConvert = useCallback(async () => {
     if (!isButtonActive) return;
-    const processingStartedAt = Date.now();
-    const waitForProcessingMinimum = () => {
-      const remainingMs =
-        PROCESSING_MIN_DURATION_MS - (Date.now() - processingStartedAt);
-      if (remainingMs <= 0) return Promise.resolve();
-      return new Promise((resolve) => window.setTimeout(resolve, remainingMs));
-    };
     trackEvent("convert_started", {
       name_length: characterName.trim().length,
       is_preview: isPreviewMode,
     });
     setGenerationError("");
+    setShowGenerationErrorModal(false);
+    setConversionStatus("pending");
     setGeneratedAssets(null);
     setPhase("processing");
 
     if (isPreviewMode) {
-      await waitForProcessingMinimum();
       setGeneratedAssets(FALLBACK_CARD_ASSETS);
-      setPhase("pack");
+      setConversionStatus("success");
       trackEvent("convert_completed", {
         mode: "preview",
       });
@@ -2029,19 +2125,28 @@ function ClassicV2Version() {
           name: characterName.trim(),
         }),
       });
-      const payload = await response.json();
+      const responseText = await response.text();
+      let payload: unknown = {};
+      if (responseText) {
+        try {
+          payload = JSON.parse(responseText);
+        } catch {
+          payload = responseText;
+        }
+      }
       if (!response.ok) {
-        const apiErrorMessage = formatApiErrorPayload(payload);
+        const apiErrorMessage = getApiErrorMessage(payload);
         trackEvent("convert_failed", {
           message: apiErrorMessage,
         });
         setGenerationError(apiErrorMessage);
+        setShowGenerationErrorModal(true);
+        setConversionStatus("error");
         setPhase("idle");
         return;
       }
       setGeneratedAssets(getGeneratedCardAssets(payload));
-      await waitForProcessingMinimum();
-      setPhase("pack");
+      setConversionStatus("success");
       trackEvent("convert_completed", {
         mode: "api",
       });
@@ -2055,14 +2160,17 @@ function ClassicV2Version() {
           ? error.message
           : "카드 이미지를 만들지 못했어요.",
       );
+      setShowGenerationErrorModal(true);
+      setConversionStatus("error");
       setPhase("idle");
     }
   }, [characterName, isButtonActive, isPreviewMode, uploadedImage]);
 
   const handleOpenPack = useCallback(() => {
+    if (conversionStatus !== "success") return;
     trackEvent("card_pack_opened");
     setPhase("dim");
-  }, []);
+  }, [conversionStatus]);
   const handleResult = useCallback(() => {
     trackEvent("result_viewed");
     setPhase("result");
@@ -2077,10 +2185,12 @@ function ClassicV2Version() {
     setPhase("idle");
     setUploadedImage(null);
     setGeneratedAssets(null);
+    setConversionStatus("idle");
     setCharacterName("");
     setNameError("");
     setRegistrationView(null);
     setGenerationError("");
+    setShowGenerationErrorModal(false);
     window.scrollTo(0, 0);
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
@@ -2376,7 +2486,7 @@ function ClassicV2Version() {
                   </span>
                 </PixelButton>
               </div>
-              {generationError && (
+              {generationError && !showGenerationErrorModal && (
                 <pre
                   className="mt-3 min-h-[18px] max-w-[280px] whitespace-pre-wrap break-words text-center text-[10px] leading-[1.5] tracking-[0.3px] text-[#c84f3d]"
                   style={{
@@ -2397,7 +2507,10 @@ function ClassicV2Version() {
         )}
 
         {phase === "pack" && (
-          <CardPackPanel onOpen={handleOpenPack} />
+          <CardPackPanel
+            isReady={conversionStatus === "success"}
+            onOpen={handleOpenPack}
+          />
         )}
       </main>
 
@@ -2409,15 +2522,17 @@ function ClassicV2Version() {
           draggable={false}
         />
         {[
-          { label: "인스타그램", target: "instagram", className: "left-[78.5%] top-[13.9%] h-[14%] w-[6.8%]" },
-          { label: "이메일", target: "email", className: "left-[87.8%] top-[13.9%] h-[14%] w-[6.8%]" },
-          { label: "이용약관", target: "terms", className: "left-[7.4%] top-[52.5%] h-[8.5%] w-[12.4%]" },
-          { label: "개인정보처리방침", target: "privacy", className: "left-[25.6%] top-[52.5%] h-[8.5%] w-[23.6%]" },
-          { label: "사전예약 이벤트 규약", target: "event_terms", className: "left-[55.1%] top-[52.5%] h-[8.5%] w-[28.3%]" },
+          { label: "인스타그램", target: "instagram", href: "https://www.instagram.com/pochakfarm.official/", className: "left-[78.5%] top-[13.9%] h-[14%] w-[6.8%]" },
+          { label: "이메일", target: "email", href: "mailto:somagochi2026@gmail.com", className: "left-[87.8%] top-[13.9%] h-[14%] w-[6.8%]" },
+          { label: "이용약관", target: "terms", href: "https://painted-sunspot-251.notion.site/399209062fbe80b683f0c16882b0357d?pvs=73", className: "left-[7.4%] top-[52.5%] h-[8.5%] w-[12.4%]" },
+          { label: "개인정보처리방침", target: "privacy", href: "https://painted-sunspot-251.notion.site/38f209062fbe8014beb2e6403bbd15e6?pvs=74", className: "left-[25.6%] top-[52.5%] h-[8.5%] w-[23.6%]" },
+          { label: "사전예약 이벤트 규약", target: "event_terms", href: "https://painted-sunspot-251.notion.site/395209062fbe80f4968ee01c8f20e6e8", className: "left-[55.1%] top-[52.5%] h-[8.5%] w-[28.3%]" },
         ].map((link) => (
-          <button
+          <a
             key={link.target}
-            type="button"
+            href={link.href}
+            target={link.href.startsWith("mailto:") ? undefined : "_blank"}
+            rel={link.href.startsWith("mailto:") ? undefined : "noopener noreferrer"}
             aria-label={link.label}
             className={`absolute cursor-pointer ${link.className}`}
             onClick={() => {
@@ -2438,6 +2553,41 @@ function ClassicV2Version() {
             onRegister={() => setRegistrationView("cta")}
           />
         )}
+      {showGenerationErrorModal && (
+        <div
+          className="fixed inset-0 z-[260] flex items-center justify-center bg-black/60 px-6 backdrop-blur-[5px]"
+          role="alertdialog"
+          aria-modal="true"
+          aria-label="변환 오류"
+        >
+          <div className="w-full max-w-[320px]">
+            <WindowPanel>
+              <div className="flex flex-col items-center px-7 py-7">
+                <p
+                  className="text-center text-[17px] tracking-[.6px] text-[#32322d]"
+                  style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+                >
+                  변환에 실패했어요
+                </p>
+                <pre
+                  className="mt-4 max-h-[180px] w-full overflow-auto whitespace-pre-wrap break-words text-center text-[12px] leading-[1.6] text-[#c84f3d]"
+                  style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
+                >
+                  {generationError}
+                </pre>
+                <button
+                  type="button"
+                  onClick={() => setShowGenerationErrorModal(false)}
+                  className="mt-6 flex h-[44px] w-full items-center justify-center rounded-[8px] bg-[#628d38] text-[14px] tracking-[.8px] text-white"
+                  style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+                >
+                  확인
+                </button>
+              </div>
+            </WindowPanel>
+          </div>
+        </div>
+      )}
       {showImageGuide && (
         <div
           className="fixed inset-0 z-[240] flex items-center justify-center bg-black/55 px-4 py-6"
@@ -2542,9 +2692,11 @@ function ToastNotification({
 }
 
 function EarlyRegistrationDialog({
+  characterizationId,
   onClose,
   onComplete,
 }: {
+  characterizationId: string | null;
   onClose: () => void;
   onComplete: () => void;
 }) {
@@ -2577,6 +2729,14 @@ function EarlyRegistrationDialog({
     setIsSubmitting(true);
 
     try {
+      const numericCharacterizationId = Number(characterizationId);
+      if (
+        !Number.isSafeInteger(numericCharacterizationId) ||
+        numericCharacterizationId <= 0
+      ) {
+        throw new Error("캐릭터 정보를 확인할 수 없어요.");
+      }
+
       const response = await fetch("/api/pre-registrations", {
         method: "POST",
         credentials: "include",
@@ -2584,8 +2744,9 @@ function EarlyRegistrationDialog({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          phoneNumber: digits,
+          phoneNumber: formattedPhone,
           requiredConsent: true,
+          characterizationId: numericCharacterizationId,
         }),
       });
       const isJsonResponse = response.headers
@@ -2620,7 +2781,14 @@ function EarlyRegistrationDialog({
     } finally {
       setIsSubmitting(false);
     }
-  }, [canBypassRegistration, canSubmit, digits, isSubmitting, onComplete]);
+  }, [
+    canBypassRegistration,
+    canSubmit,
+    characterizationId,
+    formattedPhone,
+    isSubmitting,
+    onComplete,
+  ]);
   const termsSections = [
     {
       title: "수집·이용 목적",
@@ -3061,15 +3229,17 @@ function CTAPage({
           draggable={false}
         />
         {[
-          { label: "인스타그램", target: "instagram", className: "left-[78.5%] top-[13.9%] h-[14%] w-[6.8%]" },
-          { label: "이메일", target: "email", className: "left-[87.8%] top-[13.9%] h-[14%] w-[6.8%]" },
-          { label: "이용약관", target: "terms", className: "left-[7.4%] top-[52.5%] h-[8.5%] w-[12.4%]" },
-          { label: "개인정보처리방침", target: "privacy", className: "left-[25.6%] top-[52.5%] h-[8.5%] w-[23.6%]" },
-          { label: "사전예약 이벤트 규약", target: "event_terms", className: "left-[55.1%] top-[52.5%] h-[8.5%] w-[28.3%]" },
+          { label: "인스타그램", target: "instagram", href: "https://www.instagram.com/pochakfarm.official/", className: "left-[78.5%] top-[13.9%] h-[14%] w-[6.8%]" },
+          { label: "이메일", target: "email", href: "mailto:somagochi2026@gmail.com", className: "left-[87.8%] top-[13.9%] h-[14%] w-[6.8%]" },
+          { label: "이용약관", target: "terms", href: "https://painted-sunspot-251.notion.site/399209062fbe80b683f0c16882b0357d?pvs=73", className: "left-[7.4%] top-[52.5%] h-[8.5%] w-[12.4%]" },
+          { label: "개인정보처리방침", target: "privacy", href: "https://painted-sunspot-251.notion.site/38f209062fbe8014beb2e6403bbd15e6?pvs=74", className: "left-[25.6%] top-[52.5%] h-[8.5%] w-[23.6%]" },
+          { label: "사전예약 이벤트 규약", target: "event_terms", href: "https://painted-sunspot-251.notion.site/395209062fbe80f4968ee01c8f20e6e8", className: "left-[55.1%] top-[52.5%] h-[8.5%] w-[28.3%]" },
         ].map((link) => (
-          <button
+          <a
             key={link.target}
-            type="button"
+            href={link.href}
+            target={link.href.startsWith("mailto:") ? undefined : "_blank"}
+            rel={link.href.startsWith("mailto:") ? undefined : "noopener noreferrer"}
             aria-label={link.label}
             className={`absolute cursor-pointer ${link.className}`}
             onClick={() => {
@@ -3087,6 +3257,7 @@ function CTAPage({
       />
       {showDialog && (
         <EarlyRegistrationDialog
+          characterizationId={characterizationId}
           onClose={() => setShowDialog(false)}
           onComplete={() => {
             trackEvent("cta_registration_completed");

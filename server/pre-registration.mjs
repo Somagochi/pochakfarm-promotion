@@ -12,6 +12,7 @@ export async function createPreRegistration(body, env = process.env, options = {
       ? body.phoneNumber.replace(/\D/g, "")
       : "";
   const requiredConsent = body.requiredConsent === true;
+  const characterizationId = Number(body.characterizationId);
 
   if (!/^01\d{8,9}$/.test(phoneNumber)) {
     throw httpError(400, "전화번호를 다시 확인해주세요.");
@@ -21,6 +22,15 @@ export async function createPreRegistration(body, env = process.env, options = {
     throw httpError(400, "개인정보 수집 및 이용 동의가 필요해요.");
   }
 
+  if (!Number.isSafeInteger(characterizationId) || characterizationId <= 0) {
+    throw httpError(400, "characterizationId를 다시 확인해주세요.");
+  }
+
+  const formattedPhoneNumber = `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(
+    3,
+    7,
+  )}-${phoneNumber.slice(7, 11)}`;
+
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -28,8 +38,9 @@ export async function createPreRegistration(body, env = process.env, options = {
       ...(options.cookie ? { Cookie: options.cookie } : {}),
     },
     body: JSON.stringify({
-      phoneNumber,
+      phoneNumber: formattedPhoneNumber,
       requiredConsent,
+      characterizationId,
     }),
   });
   const setCookie = readSetCookie(response);
