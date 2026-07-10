@@ -56,6 +56,7 @@ import imgCornerBR from "../imports/2200포착-7/38b961cc3cce7fcaa6c20191eb62363
 // Sliced card-pack pieces
 import imgCardPackTop from "../assets/ui/card-pack-top.png";
 import imgCardPackBottom from "../assets/ui/card-pack-bottom.png";
+import imgCardSkyGold from "../assets/ui/card-sky-gold.png";
 
 // Dog pixel-art SVG component (inline JSX — avoids SVG file import issues)
 import FigmaDog from "../imports/Frame427322333/index";
@@ -204,12 +205,6 @@ const KEYFRAMES = `
     12.46%{transform:rotate(10deg);opacity:1}
     25%,100%{transform:rotate(30deg);opacity:0}
   }
-  @keyframes packCutOpen {
-    0%,12.46%{transform:scaleY(0)}
-    25%{transform:scaleY(1)}
-    33.84%{transform:scaleY(.5)}
-    62.5%,100%{transform:scaleY(0)}
-  }
   @keyframes packSeamSparkle {
     0%{transform:translate(-50%,-50%) rotate(0deg) scale(0);opacity:0}
     35%{transform:translate(-50%,-50%) rotate(45deg) scale(1);opacity:1}
@@ -229,6 +224,14 @@ const KEYFRAMES = `
   @keyframes packBodyExit {
     0%,87.54%{translate:0 0}
     92.53%,100%{translate:0 390px}
+  }
+  @keyframes cardSkyArrive {
+    0%{left:50%;top:50%;transform:translate(-50%,-50%) rotate(120deg) skewY(30deg) scale(0);opacity:0}
+    33%{left:50%;top:50%;transform:translate(-50%,-50%) rotate(0deg) skewY(0deg) scale(1.875);opacity:1}
+    50%{transform:translate(-50%,-50%) scale(1.625);opacity:1}
+    64%{transform:translate(-50%,-50%) scale(1.75);opacity:1}
+    81%{transform:translate(-50%,-50%) scale(.875);opacity:1}
+    100%{left:var(--sky-x);top:var(--sky-y);transform:translate(-50%,-50%) scale(1);opacity:1}
   }
 `;
 
@@ -1095,11 +1098,11 @@ function ProcessingPanel({
               {CARD_SELECT_BACK_DELAYS.map((delay, index) => (
                 <div
                   key={`card-back-${delay}-${index}`}
-                  className="absolute left-1/2 top-[112px] z-0 h-[157px] w-[117px]"
+                  className="absolute left-1/2 top-[104px] z-0 h-[173px] w-[129px]"
                   aria-hidden="true"
                   style={{
                     animation: `cardBackSweep 1500ms cubic-bezier(0.25,0.46,0.45,0.94) ${delay}ms 1 both`,
-                    marginLeft: "-58.5px",
+                    marginLeft: "-64.5px",
                     transformOrigin: "50% 50%",
                   }}
                 >
@@ -1122,11 +1125,11 @@ function ProcessingPanel({
               {CARD_SELECT_FRONT_DELAYS.map((delay, index) => (
                 <div
                   key={`card-front-${delay}-${index}`}
-                  className="absolute left-1/2 top-[96px] z-20 h-[157px] w-[117px]"
+                  className="absolute left-1/2 top-[88px] z-20 h-[173px] w-[129px]"
                   aria-hidden="true"
                   style={{
                     animation: `cardFrontSweep 1500ms cubic-bezier(0.25,0.46,0.45,0.94) ${delay}ms 1 both`,
-                    marginLeft: "-58.5px",
+                    marginLeft: "-64.5px",
                     transformOrigin: "50% 50%",
                   }}
                 >
@@ -1139,12 +1142,12 @@ function ProcessingPanel({
                 </div>
               ))}
               <div
-                className="absolute left-1/2 top-[96px] z-30 h-[157px] w-[117px]"
+                className="absolute left-1/2 top-[88px] z-30 h-[173px] w-[129px]"
                 aria-label="선택된 카드팩"
                 style={{
                   animation:
                     "cardFinalSelect 1200ms cubic-bezier(0.25,0.46,0.45,0.94) 9300ms 1 both",
-                  marginLeft: "-58.5px",
+                  marginLeft: "-64.5px",
                   transformOrigin: "50% 50%",
                 }}
               >
@@ -1400,15 +1403,12 @@ function PackOpeningOverlay({ characterName, assets, onResult, onRegister }: {
   onResult: () => void;
   onRegister?: () => void;
 }) {
-  const [showResult, setShowResult] = useState(false);
+  const [openingScene, setOpeningScene] = useState<"pack" | "sky" | "result">("pack");
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setShowResult(true);
-      onResult();
-    }, 8000);
-    return () => window.clearTimeout(timer);
-  }, [onResult]);
+    const skyTimer = window.setTimeout(() => setOpeningScene("sky"), 8000);
+    return () => window.clearTimeout(skyTimer);
+  }, []);
 
   const particles = Array.from({ length: 36 }, (_, index) => {
     const angle = (index / 36) * Math.PI * 2;
@@ -1431,7 +1431,7 @@ function PackOpeningOverlay({ characterName, assets, onResult, onRegister }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/75 backdrop-blur-[6px]">
       <div className="pointer-events-none absolute inset-0 opacity-50" style={{ background: "radial-gradient(ellipse 70% 50% at 50% 55%, rgba(98,141,56,.45), transparent 70%)" }} />
-      {!showResult ? (
+      {openingScene === "pack" ? (
         <div className="relative flex h-[560px] w-[330px] items-center justify-center" aria-label="카드팩 개봉 중">
           {particles.map((particle, index) => (
             <span
@@ -1481,7 +1481,7 @@ function PackOpeningOverlay({ characterName, assets, onResult, onRegister }: {
                 draggable={false}
                 className="absolute left-1/2 top-[87px] w-[310px] -translate-x-1/2 drop-shadow-2xl"
               />
-              <div className="absolute top-0 w-[310px] -translate-x-1/2" style={{ left: "calc(50% + 10px)" }}>
+              <div className="absolute top-0 w-[310px] -translate-x-1/2" style={{ left: "calc(50% + 16px)" }}>
                 <img
                   src={imgCardPackTop}
                   alt=""
@@ -1490,7 +1490,6 @@ function PackOpeningOverlay({ characterName, assets, onResult, onRegister }: {
                   style={{ transformOrigin: "92.9% 95.4%", animation: "packTopTear 8s cubic-bezier(.5,0,.5,1) 1 both" }}
                 />
               </div>
-              <div className="absolute left-[22px] right-[22px] top-[86px] h-[12px] origin-top bg-white/80 shadow-[0_0_14px_#9fe1ff]" style={{ animation: "packCutOpen 8s cubic-bezier(.5,0,.5,1) 1 both" }} />
               {Array.from({ length: 11 }, (_, index) => (
                 <span
                   key={`seam-sparkle-${index}`}
@@ -1508,8 +1507,85 @@ function PackOpeningOverlay({ characterName, assets, onResult, onRegister }: {
           </div>
 
         </div>
+      ) : openingScene === "sky" ? (
+        <CardSkyScene
+          onSelect={(cardIndex) => {
+            trackEvent("card_sky_selected", { card_index: cardIndex + 1 });
+            setOpeningScene("result");
+            onResult();
+          }}
+        />
       ) : (
         <ResultOverlay characterName={characterName} assets={assets} onRegister={onRegister} />
+      )}
+    </div>
+  );
+}
+
+function CardSkyScene({ onSelect }: { onSelect: (cardIndex: number) => void }) {
+  const [canSelect, setCanSelect] = useState(false);
+  const cards = [
+    { delay: 0, x: "17.82%", y: "50%" },
+    { delay: 1367, x: "50%", y: "50%" },
+    { delay: 2800, x: "82.18%", y: "50%" },
+    { delay: 4133, x: "33.75%", y: "81.62%" },
+    { delay: 5467, x: "65.63%", y: "81.62%" },
+  ];
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setCanSelect(true), 7200);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  return (
+    <div
+      className="relative h-[464px] w-[330px] max-w-[92vw] overflow-hidden"
+      aria-label={canSelect ? "카드 한 장을 선택하세요" : "카드가 하늘에 펼쳐지는 중"}
+    >
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ background: "radial-gradient(circle at 50% 52%, rgba(255,207,48,.22), transparent 62%)" }}
+      />
+      {cards.map((card, index) => (
+        <button
+          key={card.delay}
+          type="button"
+          disabled={!canSelect}
+          aria-label={`${index + 1}번 카드 선택`}
+          onClick={() => onSelect(index)}
+          className={`group absolute w-[27.83%] border-0 bg-transparent p-0 opacity-0 outline-none ${
+            canSelect ? "cursor-pointer" : "cursor-default"
+          }`}
+          style={{
+            "--sky-x": card.x,
+            "--sky-y": card.y,
+            animation: `cardSkyArrive 1200ms cubic-bezier(.22,.61,.36,1) ${card.delay}ms 1 both`,
+            zIndex: index + 1,
+          } as React.CSSProperties}
+        >
+          <img
+            src={imgCardSkyGold}
+            alt=""
+            draggable={false}
+            className={`block w-full select-none transition-[transform,filter] duration-200 ease-out ${
+              canSelect
+                ? "group-hover:-translate-y-2 group-hover:scale-110 group-hover:brightness-110 group-hover:drop-shadow-[0_0_20px_rgba(255,220,80,.95)] group-focus-visible:-translate-y-2 group-focus-visible:scale-110 group-focus-visible:brightness-110 group-focus-visible:drop-shadow-[0_0_20px_rgba(255,220,80,.95)] group-active:scale-105"
+                : ""
+            }`}
+          />
+        </button>
+      ))}
+      {canSelect && (
+        <p
+          className="absolute inset-x-0 top-[4%] z-20 text-center text-[15px] tracking-[.5px] text-white"
+          style={{
+            fontFamily: "Elice DX Neolli",
+            fontWeight: 500,
+            textShadow: "0 0 8px rgba(255,215,80,.9)",
+          }}
+        >
+          원하는 카드를 선택해주세요
+        </p>
       )}
     </div>
   );
