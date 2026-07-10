@@ -81,6 +81,7 @@ const UPLOAD_IMAGE_QUALITY = 0.82;
 const NAME_FILTER = /[^ㄱ-ㅎ가-힣a-zA-Z0-9\s]/g;
 const SHARE_BUTTON_FRAME_FILTER =
   "brightness(0) saturate(100%) invert(88%) sepia(13%) saturate(418%) hue-rotate(356deg) brightness(95%) contrast(88%)";
+const SHARE_LINK_ORIGIN = "http://13.209.190.156";
 
 type GeneratedCardAssets = {
   cardImage: string;
@@ -291,11 +292,23 @@ async function copyShareLink(url = window.location.href) {
 }
 
 function createCtaShareLink(characterizationId?: string | null) {
-  const url = new URL(window.location.pathname || "/", window.location.origin);
-  if (characterizationId) {
-    url.searchParams.set("characterization_id", characterizationId);
-  }
+  if (!characterizationId) return window.location.href;
+
+  const url = new URL(
+    `/share/characterizations/${encodeURIComponent(characterizationId)}`,
+    SHARE_LINK_ORIGIN,
+  );
   return url.toString();
+}
+
+function getSharedCharacterizationId(searchParams: URLSearchParams) {
+  const pathMatch = window.location.pathname.match(
+    /^\/share\/characterizations\/([^/]+)\/?$/,
+  );
+  const pathCharacterizationId = pathMatch?.[1]
+    ? decodeURIComponent(pathMatch[1])
+    : "";
+  return pathCharacterizationId || searchParams.get("characterization_id") || "";
 }
 
 function getGeneratedCardAssets(payload: unknown): GeneratedCardAssets {
@@ -1931,8 +1944,7 @@ function ResultOverlay({
 function ClassicV2Version() {
   const searchParams = new URLSearchParams(window.location.search);
   const sharedCtaName = searchParams.get("name") || "";
-  const sharedCharacterizationId =
-    searchParams.get("characterization_id") || "";
+  const sharedCharacterizationId = getSharedCharacterizationId(searchParams);
   const isSharedCta =
     searchParams.get("cta") === "1" || !!sharedCharacterizationId;
   const [phase, setPhase] = useState<Phase>("idle");
@@ -2039,7 +2051,12 @@ function ClassicV2Version() {
           return;
         }
 
-        setGeneratedAssets(getGeneratedCardAssets(payload));
+        const assets = getGeneratedCardAssets(payload);
+        setGeneratedAssets({
+          ...assets,
+          characterizationId:
+            assets.characterizationId || sharedCharacterizationId,
+        });
         trackEvent("shared_characterization_loaded");
       } catch (error) {
         if (isCancelled) return;
