@@ -4,7 +4,6 @@
   useEffect,
   useCallback,
 } from "react";
-import { XIcon } from "lucide-react";
 import { trackEvent } from "../analytics";
 import imgBtnSmall from "../assets/ui/btn-sm.png";
 import imgBtnSmall2 from "../assets/ui/btn-sm-2.png";
@@ -1843,6 +1842,35 @@ function ClassicV2Version() {
   const isButtonActive =
     !!uploadedImage && characterName.trim().length > 0;
   const isPreviewMode = searchParams.get("preview") === "1";
+  const isTransformationOverlayOpen =
+    registrationView === null && phase !== "idle";
+
+  useEffect(() => {
+    if (!isTransformationOverlayOpen) return;
+
+    const body = document.body;
+    const root = document.documentElement;
+    const previousBodyStyles = {
+      overflow: body.style.overflow,
+      overscrollBehavior: body.style.overscrollBehavior,
+    };
+    const previousRootStyles = {
+      overflow: root.style.overflow,
+      overscrollBehavior: root.style.overscrollBehavior,
+    };
+
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+    root.style.overflow = "hidden";
+    root.style.overscrollBehavior = "none";
+
+    return () => {
+      body.style.overflow = previousBodyStyles.overflow;
+      body.style.overscrollBehavior = previousBodyStyles.overscrollBehavior;
+      root.style.overflow = previousRootStyles.overflow;
+      root.style.overscrollBehavior = previousRootStyles.overscrollBehavior;
+    };
+  }, [isTransformationOverlayOpen]);
 
   useEffect(() => {
     trackEvent("page_viewed", {
@@ -2349,18 +2377,12 @@ function ClassicV2Version() {
               className="block w-full object-contain"
               draggable={false}
             />
-            <div
-              className="absolute right-0 top-0 z-[2] h-[76px] w-[76px] bg-[#eee7d8]"
-              aria-hidden="true"
-            />
             <button
               type="button"
-              className="absolute right-[12px] top-[12px] z-[3] flex h-[44px] w-[44px] items-center justify-center text-[#9d9b91]"
+              className="absolute right-0 top-0 z-[3] h-[76px] w-[76px] bg-transparent"
               aria-label="이미지 가이드 닫기"
               onClick={() => setShowImageGuide(false)}
-            >
-              <XIcon className="h-[24px] w-[24px]" strokeWidth={3} />
-            </button>
+            />
           </div>
         </div>
       )}
@@ -2925,6 +2947,18 @@ function CTAPage({
               >
                 {isSharedEntry ? "나도 포착하기" : "친구에게 자랑하기"}
               </PixelButton>
+
+              <button
+                type="button"
+                onClick={() => {
+                  trackEvent("cta_home_clicked");
+                  onCreateNew();
+                }}
+                className="mt-[3px] cursor-pointer text-[11px] tracking-[0.35px] text-[#6a6a61] transition-colors hover:text-[#32322d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#628d38]/60"
+                style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
+              >
+                홈으로 돌아가기
+              </button>
             </div>
           </div>
           </WindowPanel>
