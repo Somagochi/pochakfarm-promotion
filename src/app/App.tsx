@@ -53,8 +53,9 @@ import imgCornerBLb from "../imports/2200포착-7/4e013676febbb1c8d774637eb5341c
 import imgEdgeBot from "../imports/2200포착-7/1e2ded9ef440b7f889fcfee3c5936e0f36da63c2.png";
 import imgCornerBR from "../imports/2200포착-7/38b961cc3cce7fcaa6c20191eb623633d23043b4.png";
 
-// Card pack (POCHAKFARM green pack)
-import imgCardPack from "../assets/ui/card-pack.png";
+// Sliced card-pack pieces
+import imgCardPackTop from "../assets/ui/card-pack-top.png";
+import imgCardPackBottom from "../assets/ui/card-pack-bottom.png";
 
 // Dog pixel-art SVG component (inline JSX — avoids SVG file import issues)
 import FigmaDog from "../imports/Frame427322333/index";
@@ -127,8 +128,21 @@ const ONBOARDING_SLIDES = [
   "/assets/carousel4.png",
 ];
 const LAUNCH_TARGET_TIME = new Date("2026-08-01T00:00:00+09:00").getTime();
-const LOADING_ANIMAL_ICON = "/assets/loading-animal.png";
-const LOADING_WARNING_ICON = "/assets/warning.png";
+const CARD_PACK_OPEN_PROMPT_IMAGE = "/assets/card-pack-open-prompt.png";
+const CARD_PACK_FRONT_IMAGE = "/assets/card-pack-front.png";
+const CARD_PACK_BACK_IMAGE = "/assets/card-pack-back.png";
+const CARD_SELECT_FRONT_DELAYS = [
+  0, 500, 1000, 1500, 1998, 2500, 2998, 3497, 3998, 4497, 4996, 5493, 5996,
+  6750, 7500, 8250, 8993,
+];
+const CARD_SELECT_BACK_DELAYS = [
+  1300, 1800, 2300, 2798, 3298, 3800, 4297, 4800, 5300, 5797, 6300, 7050, 7800,
+  8550, 9300,
+];
+const SCAN_STAGE_DURATION_MS = 8000;
+const CARD_SELECT_STAGE_DURATION_MS = 10500;
+const PROCESSING_MIN_DURATION_MS =
+  SCAN_STAGE_DURATION_MS + CARD_SELECT_STAGE_DURATION_MS;
 
 const KEYFRAMES = `
   @keyframes float      { 0%,100%{transform:translateY(0)}   50%{transform:translateY(-10px)} }
@@ -136,6 +150,86 @@ const KEYFRAMES = `
   @keyframes spotlight  { 0%,100%{opacity:0.7}              50%{opacity:1} }
   @keyframes dogBreath  { 0%,100%{opacity:1}                50%{opacity:0.12} }
   @keyframes softPulse  { 0%,100%{transform:scale(1)}        50%{transform:scale(1.05)} }
+  @keyframes textShimmer { 0%{background-position:220% 0} 100%{background-position:-120% 0} }
+  @keyframes figmaScanY  { 0%{transform:translateY(122px)} 50%{transform:translateY(-122px)} 100%{transform:translateY(122px)} }
+  @keyframes scanGlow   { 0%,100%{opacity:.72} 50%{opacity:1} }
+  @keyframes cardFrontSweep {
+    0%{opacity:0;transform:translate3d(-210px,10px,0) rotate(5deg) scale(.6,.8)}
+    10%{opacity:.82}
+    48%{opacity:1;transform:translate3d(-8px,-8px,0) rotate(0deg) scale(1.08,1.15)}
+    90%{opacity:.82}
+    100%{opacity:0;transform:translate3d(210px,10px,0) rotate(-5deg) scale(.6,.8)}
+  }
+  @keyframes cardBackSweep {
+    0%{opacity:0;transform:translate3d(210px,26px,0) rotate(5deg) scale(.6,.8)}
+    10%{opacity:.22}
+    48%{opacity:.3;transform:translate3d(8px,4px,0) rotate(0deg) scale(.6,.6)}
+    90%{opacity:.22}
+    100%{opacity:0;transform:translate3d(-210px,26px,0) rotate(-5deg) scale(.6,.8)}
+  }
+  @keyframes cardFinalSelect {
+    0%{opacity:0;transform:translate3d(-210px,10px,0) rotate(5deg) scale(.6,.8)}
+    18%{opacity:.9}
+    58%{opacity:1;transform:translate3d(0,-8px,0) rotate(0deg) scale(1.08,1.15)}
+    100%{opacity:1;transform:translate3d(0,-8px,0) rotate(0deg) scale(1.52,1.62)}
+  }
+  @keyframes packReadyMotion {
+    0%{transform:translate(0,0) rotate(0deg) scale(1)}
+    16.67%{transform:translate(4px,-22px) rotate(1deg) scale(1.1)}
+    33.36%{transform:translate(1px,21px) rotate(-4.05deg) scale(1.1)}
+    50.01%{transform:translate(4px,-22px) rotate(1deg) scale(1.1)}
+    66.68%{transform:translate(1px,21px) rotate(-4.05deg) scale(1.1)}
+    79.99%{transform:translate(4px,-22px) rotate(1deg) scale(1.1)}
+    100%{transform:translate(0,0) rotate(0deg) scale(1)}
+  }
+  @keyframes packPromptMotion {
+    0%{opacity:0;transform:translateX(0) scale(.5)}
+    16.67%{opacity:1;transform:translateX(0) scale(1.1)}
+    33.36%{opacity:1;transform:translateX(17px) scaleX(.81)}
+    50%{opacity:1;transform:translateX(-9px) scaleX(1)}
+    66.68%{opacity:1;transform:translateX(19px) scaleX(.81)}
+    79.99%{opacity:1;transform:translateX(-9px) scaleX(1)}
+    100%{opacity:1;transform:translateX(0) scale(1)}
+  }
+  @keyframes cutGuideBlink {
+    0%,20%,40%,100%{opacity:1}
+    10%,30%{opacity:.3}
+  }
+  @keyframes cutHandlePulse {
+    0%,100%{transform:translate(-50%,-50%) scale(1)}
+    50%{transform:translate(-50%,-50%) scale(1.12)}
+  }
+  @keyframes packTopTear {
+    0%,7.5%{transform:rotate(0deg);opacity:1}
+    12.46%{transform:rotate(10deg);opacity:1}
+    25%,100%{transform:rotate(30deg);opacity:0}
+  }
+  @keyframes packCutOpen {
+    0%,12.46%{transform:scaleY(0)}
+    25%{transform:scaleY(1)}
+    33.84%{transform:scaleY(.5)}
+    62.5%,100%{transform:scaleY(0)}
+  }
+  @keyframes packSeamSparkle {
+    0%{transform:translate(-50%,-50%) rotate(0deg) scale(0);opacity:0}
+    35%{transform:translate(-50%,-50%) rotate(45deg) scale(1);opacity:1}
+    100%{transform:translate(-50%,-50%) rotate(90deg) scale(0);opacity:0}
+  }
+  @keyframes burstParticle {
+    0%{transform:translate(0,0) scale(0);opacity:0}
+    10%{transform:translate(var(--burst-x),var(--burst-y)) scale(1);opacity:1}
+    15%{transform:translate(var(--burst-x),var(--burst-y)) scale(1);opacity:1}
+    25%,100%{transform:translate(var(--burst-x2),var(--burst-y2)) scale(0);opacity:0}
+  }
+  @keyframes revealCardLaunch {
+    0%{transform:translate(var(--start-x),35px) rotate(var(--start-r)) scale(1);opacity:1}
+    20%{transform:translate(var(--bump-x),18px) rotate(0deg) scale(1);opacity:1}
+    100%{transform:translate(var(--end-x),-790px) rotate(0deg) scaleY(.9);opacity:1}
+  }
+  @keyframes packBodyExit {
+    0%,87.54%{translate:0 0}
+    92.53%,100%{translate:0 390px}
+  }
 `;
 
 type Phase = "idle" | "processing" | "pack" | "dim" | "result";
@@ -906,116 +1000,164 @@ function OnboardingCarousel({
   );
 }
 
-// ── ProcessingPanel — card pack inside window frame ───────────
-function ProcessingPanel() {
-  const [progress, setProgress] = useState(0);
-  useEffect(() => {
-    const DURATION = 22000;
-    const start = Date.now();
-    let rafId: number;
-    const tick = () => {
-      const p = Math.min((Date.now() - start) / DURATION, 0.95);
-      setProgress(p);
-      rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, []);
-
-  const loadingPercent = Math.min(95, Math.round(progress * 100));
+// ── ProcessingPanel — loading overlay ────────────────────────
+function ProcessingPanel({
+  uploadedImage,
+}: {
+  uploadedImage: string | null;
+}) {
+  const [loadingStage, setLoadingStage] = useState<"scan" | "card">("scan");
 
   return (
-    <div className="flex w-full flex-col items-center">
-      <WindowPanel>
-        <div className="flex min-h-[590px] flex-col items-center px-6 pb-5 pt-0">
-          <div className="flex w-full flex-col items-center">
-            <div
-              className="relative flex h-[82px] w-[92px] items-center justify-center"
-              style={{ animation: "softPulse 1.6s ease-in-out infinite" }}
-            >
-              <img
-                src={LOADING_ANIMAL_ICON}
-                alt=""
-                className="absolute h-[70px] w-[78px] object-contain opacity-20"
-                draggable={false}
-              />
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-6"
+      role="status"
+      aria-live="polite"
+      style={{
+        backdropFilter: "blur(5px)",
+        WebkitBackdropFilter: "blur(5px)",
+      }}
+    >
+      <div className="flex h-[640px] w-[330px] max-w-full flex-col items-center">
+        <div className="flex h-[118px] w-full flex-col items-center justify-start pt-[8px]">
+          <p
+            className="text-center text-[20px] tracking-[2px]"
+            style={{
+              fontFamily: "Galmuri11",
+              fontWeight: 700,
+              color: "transparent",
+              WebkitTextStroke: "1px rgba(255,255,255,0.45)",
+              backgroundImage:
+                "linear-gradient(90deg, rgba(242,235,221,0.42) 0%, #ffffff 42%, rgba(170,235,255,0.95) 50%, #ffffff 58%, rgba(242,235,221,0.42) 100%)",
+              backgroundClip: "text",
+              WebkitBackgroundClip: "text",
+              backgroundSize: "220% 100%",
+              animation: "textShimmer 1.7s linear infinite",
+              textShadow: "0 0 10px rgba(168,238,255,0.45)",
+            }}
+          >
+            {loadingStage === "scan" ? "ANALYZING..." : "Select..."}
+          </p>
+          <p
+            className="mt-[16px] text-center text-[14px] tracking-[0.4px] text-white"
+            style={{
+              fontFamily: "Elice DX Neolli",
+              fontWeight: 500,
+            }}
+          >
+            {loadingStage === "scan"
+              ? "사진 속 동물을 분석하고 있어요"
+              : "적합한 카드팩을 선정하고 있어요"}
+          </p>
+        </div>
+
+        <div className="relative flex h-[360px] w-full items-center justify-center overflow-hidden">
+          {loadingStage === "scan" ? (
+            <div className="relative h-[220px] w-[220px] overflow-visible">
+              <div className="absolute inset-0 z-0 overflow-hidden rounded-[8px]">
+                {uploadedImage && (
+                  <img
+                    src={uploadedImage}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                    draggable={false}
+                  />
+                )}
+              </div>
               <div
-                className="absolute h-[70px] w-[78px]"
+                className="pointer-events-none absolute inset-0 z-10 overflow-visible rounded-[8px]"
+                aria-label="변환 중 스캔 애니메이션"
+                onAnimationEnd={() => setLoadingStage("card")}
                 style={{
-                  clipPath: `inset(${100 - loadingPercent}% 0 0 0)`,
-                  transition: "clip-path 0.1s linear",
+                  animation:
+                    "figmaScanY 4s cubic-bezier(0.293,-0.245,0.652,1.123) 2",
                 }}
-                aria-hidden="true"
+              >
+                <div
+                  className="absolute left-1/2 top-1/2 h-[72px] w-[288px] -translate-x-1/2 rounded-[12px] bg-[#5f8f35]/45 blur-[10px]"
+                  style={{
+                    transform: "translate(-50%, 4px)",
+                  }}
+                />
+                <div
+                  className="absolute left-1/2 top-1/2 h-[10px] w-[288px] -translate-x-1/2 rounded-full bg-[#8fcd54]"
+                  style={{
+                    boxShadow:
+                      "0 0 12px rgba(143,205,84,0.95), 0 0 24px rgba(143,205,84,0.65)",
+                    animation: "scanGlow 1s ease-in-out infinite",
+                  }}
+                />
+              </div>
+              <div className="pointer-events-none absolute inset-0 z-20 rounded-[8px] ring-1 ring-white/45" />
+            </div>
+          ) : (
+            <>
+              {CARD_SELECT_BACK_DELAYS.map((delay, index) => (
+                <div
+                  key={`card-back-${delay}-${index}`}
+                  className="absolute left-1/2 top-[112px] z-0 h-[157px] w-[117px]"
+                  aria-hidden="true"
+                  style={{
+                    animation: `cardBackSweep 1500ms cubic-bezier(0.25,0.46,0.45,0.94) ${delay}ms 1 both`,
+                    marginLeft: "-58.5px",
+                    transformOrigin: "50% 50%",
+                  }}
+                >
+                  <img
+                    src={CARD_PACK_BACK_IMAGE}
+                    alt=""
+                    className="h-full w-full object-contain"
+                    draggable={false}
+                  />
+                </div>
+              ))}
+              {uploadedImage && (
+                <img
+                  src={uploadedImage}
+                  alt=""
+                  className="absolute left-1/2 top-[26px] z-10 h-[176px] w-[176px] -translate-x-1/2 rounded-[8px] object-cover"
+                  draggable={false}
+                />
+              )}
+              {CARD_SELECT_FRONT_DELAYS.map((delay, index) => (
+                <div
+                  key={`card-front-${delay}-${index}`}
+                  className="absolute left-1/2 top-[96px] z-20 h-[157px] w-[117px]"
+                  aria-hidden="true"
+                  style={{
+                    animation: `cardFrontSweep 1500ms cubic-bezier(0.25,0.46,0.45,0.94) ${delay}ms 1 both`,
+                    marginLeft: "-58.5px",
+                    transformOrigin: "50% 50%",
+                  }}
+                >
+                  <img
+                    src={CARD_PACK_FRONT_IMAGE}
+                    alt=""
+                    className="h-full w-full object-contain"
+                    draggable={false}
+                  />
+                </div>
+              ))}
+              <div
+                className="absolute left-1/2 top-[96px] z-30 h-[157px] w-[117px]"
+                aria-label="선택된 카드팩"
+                style={{
+                  animation:
+                    "cardFinalSelect 1200ms cubic-bezier(0.25,0.46,0.45,0.94) 9300ms 1 both",
+                  marginLeft: "-58.5px",
+                  transformOrigin: "50% 50%",
+                }}
               >
                 <img
-                  src={LOADING_ANIMAL_ICON}
+                  src={CARD_PACK_FRONT_IMAGE}
                   alt=""
-                  className="absolute h-[70px] w-[78px] object-contain"
+                  className="h-full w-full object-contain"
                   draggable={false}
                 />
               </div>
-              <span
-                className="relative z-10 rounded-full bg-[#faf5eb]/85 px-2 py-1 text-[12px] tracking-[0.6px] text-[#36501e]"
-                style={{
-                  fontFamily: "Galmuri11",
-                  fontWeight: 700,
-                  boxShadow: "0 1px 0 rgba(104,85,62,0.18)",
-                }}
-              >
-                {loadingPercent}%
-              </span>
-            </div>
-
-            <p
-              className="mt-[19.94px] text-center text-[10px] tracking-[1.1px] text-[#628d38]"
-              style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
-            >
-              ANALIZING...
-            </p>
-            <p
-              className="mt-[6.35px] text-center text-[18px] leading-[1.35] tracking-[0.7px] text-[#32322d]"
-              style={{
-                fontFamily: "Elice DX Neolli",
-                fontWeight: 500,
-              }}
-            >
-              동물을 분석하고 있어요
-            </p>
-            <div
-              className="mt-[19.94px] flex min-h-[48px] flex-col items-center gap-[9.61px] px-3 text-center text-[10px] leading-none tracking-[0.35px] text-[#8f7755]"
-              style={{
-                fontFamily: "Elice DX Neolli",
-                fontWeight: 300,
-              }}
-            >
-              <p className="text-[10px] text-[#6A6A61]">실제 앱에서는 더 빠르고 재밌있게</p>
-              <p className="text-[10px] text-[#6A6A61]">포착할 수 있는 기능들을 만나볼 수 있어요</p>
-              <span className="text-[8px] text-[#BFBFB6]">
-                *웹사이트를 종료하더라도 변환은 유지돼요
-              </span>
-            </div>
-          </div>
-
-          <OnboardingCarousel className="mt-[33.81px]" />
+            </>
+          )}
         </div>
-      </WindowPanel>
-      <div className="mt-3 flex w-full items-center justify-center gap-[6px]">
-        <img
-          src={LOADING_WARNING_ICON}
-          alt=""
-          className="h-[24px] w-[24px] shrink-0 object-contain"
-          draggable={false}
-        />
-        <p
-          className="whitespace-nowrap text-left text-[8px] mt-2 leading-none text-[#f2ebdd]"
-          style={{
-            fontFamily: "Elice DX Neolli",
-            fontWeight: 500,
-            textShadow: "0 1px 0 rgba(54,80,30,0.5)",
-          }}
-        >
-          새로고침하면 작업이 중단될 수 있습니다. 잠시만 기다려 주세요.
-        </p>
       </div>
     </div>
   );
@@ -1083,224 +1225,291 @@ function PixelGeneratingModal() {
 
 // ── CardPackPanel — tap to open ───────────────────────────────
 function CardPackPanel({ onOpen }: { onOpen: () => void }) {
+  const [stage, setStage] = useState<"ready" | "cut">("ready");
+
   return (
-    <WindowPanel>
-      <div className="flex min-h-[590px] flex-col items-center px-6 pb-5 pt-0">
-        <div className="flex w-full flex-col items-center">
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-6"
+      role="dialog"
+      aria-modal="true"
+      aria-label="완성된 카드팩"
+      style={{
+        backdropFilter: "blur(5px)",
+        WebkitBackdropFilter: "blur(5px)",
+      }}
+    >
+      <div className="flex h-[640px] w-[330px] max-w-full flex-col items-center">
+        <div className="flex h-[118px] w-full flex-col items-center justify-start pt-[2px]">
           <p
-            className="text-center text-[13px] tracking-[1.4px] text-[#628d38]"
-            style={{ fontFamily: "Galmuri11", fontWeight: 700 }}
-          >
-            CARD PACK READY!
-          </p>
-
-          <button
-            type="button"
-            onClick={onOpen}
-            className="mt-5 cursor-pointer"
+            className="text-center text-[34px] leading-none tracking-[1.2px]"
             style={{
-              animation: "float 1.8s ease-in-out infinite",
+              fontFamily: "Galmuri11",
+              fontWeight: 700,
+              color: "transparent",
+              WebkitTextStroke: "1px rgba(255,255,255,0.65)",
+              backgroundImage:
+                "linear-gradient(90deg, rgba(255,255,255,0.45) 0%, #ffffff 42%, rgba(170,235,255,0.95) 50%, #ffffff 58%, rgba(255,255,255,0.45) 100%)",
+              backgroundClip: "text",
+              WebkitBackgroundClip: "text",
+              backgroundSize: "220% 100%",
+              animation: "textShimmer 1.7s linear infinite",
+              textShadow: "0 0 10px rgba(168,238,255,0.55)",
             }}
-            aria-label="카드팩 열기"
           >
+            Card Pack Ready
+          </p>
+          {stage === "ready" ? (
             <img
-              src={imgCardPack}
-              alt="카드팩"
-              className="drop-shadow-2xl"
-              style={{
-                width: "184px",
-                animation: "wobble 2.2s ease-in-out infinite",
-              }}
+              src={CARD_PACK_OPEN_PROMPT_IMAGE}
+              alt="완성된 카드팩을 클릭해 열어보세요"
+              className="mt-[18px] h-auto w-[270px] max-w-full object-contain"
+              draggable={false}
+              style={{ animation: "packPromptMotion 10s linear infinite" }}
             />
-          </button>
-
-          <p
-            className="mt-5 text-center text-[12px] tracking-[0.45px] text-[#8f7755]"
-            style={{
-              fontFamily: "Elice DX Neolli",
-              fontWeight: 500,
-            }}
-          >
-            탭해서 카드팩을 열어보세요!
-          </p>
+          ) : (
+            <p
+              className="mt-[18px] text-center text-[15px] leading-[1.5] tracking-[.4px] text-white"
+              style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+            >
+              절취선을 따라 옆으로 밀어주세요
+            </p>
+          )}
         </div>
-
-        <OnboardingCarousel initialSlide={2} />
+        <div className="relative flex h-[360px] w-full items-center justify-center overflow-visible">
+          {stage === "ready" ? (
+            <button
+              type="button"
+              onClick={() => {
+                trackEvent("card_pack_cut_ready");
+                setStage("cut");
+              }}
+              className="block cursor-pointer focus:outline-none"
+              aria-label="카드팩 자르기 시작"
+            >
+              <ReadyCardPack />
+            </button>
+          ) : (
+            <CuttableCardPack onCut={onOpen} />
+          )}
+        </div>
       </div>
-    </WindowPanel>
+    </div>
+  );
+}
+
+function ReadyCardPack() {
+  return (
+    <div
+      className="relative h-[280px] w-[208px]"
+      style={{
+        filter: "drop-shadow(0 18px 28px rgba(0,0,0,0.45))",
+        animation: "packReadyMotion 10s linear infinite",
+      }}
+    >
+      <img src={CARD_PACK_FRONT_IMAGE} alt="" className="h-full w-full object-contain" draggable={false} />
+    </div>
+  );
+}
+
+function CuttableCardPack({ onCut }: { onCut: () => void }) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [progress, setProgress] = useState(0);
+  const draggingRef = useRef(false);
+  const completedRef = useRef(false);
+
+  const updateProgress = useCallback((clientX: number) => {
+    const rect = trackRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const next = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    setProgress(next);
+    if (next >= .88 && !completedRef.current) {
+      completedRef.current = true;
+      draggingRef.current = false;
+      trackEvent("card_pack_cut_completed");
+      window.setTimeout(onCut, 180);
+    }
+  }, [onCut]);
+
+  return (
+    <div
+      className="relative h-[280px] w-[208px] touch-none select-none"
+      aria-label="카드팩 절취선 드래그 영역"
+      style={{
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        WebkitTouchCallout: "none",
+        WebkitTapHighlightColor: "transparent",
+      }}
+      onDragStart={(event) => event.preventDefault()}
+    >
+      <img
+        src={CARD_PACK_FRONT_IMAGE}
+        alt=""
+        className="pointer-events-none h-full w-full select-none object-contain drop-shadow-2xl"
+        draggable={false}
+        style={{ WebkitUserDrag: "none", userSelect: "none", WebkitUserSelect: "none" }}
+      />
+      <div
+        ref={trackRef}
+        className="absolute left-[7%] right-[7%] top-[15.5%] h-[42px] cursor-ew-resize touch-none"
+        style={{
+          touchAction: "none",
+          userSelect: "none",
+          WebkitUserSelect: "none",
+          WebkitTouchCallout: "none",
+          WebkitTapHighlightColor: "transparent",
+        }}
+        onPointerDown={(event) => {
+          event.preventDefault();
+          draggingRef.current = true;
+          event.currentTarget.setPointerCapture(event.pointerId);
+          updateProgress(event.clientX);
+        }}
+        onPointerMove={(event) => {
+          if (draggingRef.current) updateProgress(event.clientX);
+        }}
+        onPointerUp={(event) => {
+          draggingRef.current = false;
+          event.currentTarget.releasePointerCapture(event.pointerId);
+          if (!completedRef.current && progress < .88) setProgress(0);
+        }}
+        onPointerCancel={() => {
+          draggingRef.current = false;
+          if (!completedRef.current) setProgress(0);
+        }}
+      >
+        <div className="absolute left-0 right-0 top-1/2 border-t-2 border-dashed border-white/90" style={{ animation: "cutGuideBlink 10s linear infinite" }} />
+        <div className="absolute left-0 top-1/2 h-[4px] -translate-y-1/2 rounded-full bg-[#9fe1ff] shadow-[0_0_10px_#9fe1ff]" style={{ width: `${progress * 100}%` }} />
+        <div
+          className="absolute top-1/2 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-[#628d38] text-[18px] text-white shadow-[0_0_14px_rgba(159,225,255,.9)]"
+          style={{ left: `${progress * 100}%`, animation: progress === 0 ? "cutHandlePulse 1.2s ease-in-out infinite" : undefined }}
+          aria-hidden="true"
+        >
+          ✂
+        </div>
+      </div>
+    </div>
   );
 }
 
 // ── PackOpeningOverlay ────────────────────────────────────────
-// Sequence: pack → cut → pack fades + card shoots up → card lands large → result
-function PackOpeningOverlay({
-  characterName,
-  assets,
-  onResult,
-  onRegister,
-}: {
+// Figma motion 6570:396 — plays once after the user finishes slicing.
+function PackOpeningOverlay({ characterName, assets, onResult, onRegister }: {
   characterName: string;
   assets: GeneratedCardAssets;
   onResult: () => void;
   onRegister?: () => void;
 }) {
-  const [cut, setCut] = useState(false); // pack splits
-  const [packGone, setPackGone] = useState(false); // pack fades out
-  const [cardUp, setCardUp] = useState(false); // card shoots upward
-  const [cardLand, setCardLand] = useState(false); // card lands from top, large
   const [showResult, setShowResult] = useState(false);
 
   useEffect(() => {
-    const timers = [
-      setTimeout(() => setCut(true), 1200), // pack splits
-      setTimeout(() => {
-        setPackGone(true);
-        setCardUp(true);
-      }, 2800), // pack fades, card shoots up
-      setTimeout(() => setCardLand(true), 3500), // card comes back down
-      setTimeout(() => {
-        setShowResult(true);
-        onResult();
-      }, 5000), // show result
-    ];
-    return () => timers.forEach(clearTimeout);
+    const timer = window.setTimeout(() => {
+      setShowResult(true);
+      onResult();
+    }, 8000);
+    return () => window.clearTimeout(timer);
   }, [onResult]);
 
-  // Card Y position across phases:
-  // before cut → hidden below
-  // after cut  → peeking (translateY 60px, small)
-  // cardUp     → shoot up off screen (translateY -120vh)
-  // cardLand   → land from top, large then settles
-  const cardTransform = (() => {
-    if (cardLand) return "translateY(-72px) scale(1)";
-    if (cardUp) return "translateY(-120vh) scale(0.8)";
-    if (cut) return "translateY(60px) scale(0.75)";
-    return "translateY(100px) scale(0.5)";
-  })();
-
-  const cardOpacity =
-    cut && !cardLand && !cardUp
-      ? 1
-      : cardLand
-        ? 1
-        : cut
-          ? 1
-          : 0;
-
-  const cardTransition = (() => {
-    if (cardUp)
-      return "transform 0.55s cubic-bezier(0.4,0,0.6,1), opacity 0.3s ease";
-    if (cardLand)
-      return "transform 0.65s cubic-bezier(0.34,1.4,0.64,1), opacity 0.4s ease";
-    return "transform 0.8s cubic-bezier(0.34,1.56,0.64,1), opacity 0.5s ease";
-  })();
+  const particles = Array.from({ length: 36 }, (_, index) => {
+    const angle = (index / 36) * Math.PI * 2;
+    const distance = 72 + (index % 5) * 12;
+    return {
+      x: Math.cos(angle) * distance,
+      y: Math.sin(angle) * distance,
+      x2: Math.cos(angle) * (distance + 20),
+      y2: Math.sin(angle) * (distance + 20),
+    };
+  });
+  const cardLaunches = [
+    [2902, "0px", "2px", "2px", "0deg"],
+    [3830, "-11px", "-7px", "-16px", "-3.4deg"],
+    [4861, "8px", "4px", "-8px", "3.4deg"],
+    [5853, "0px", "0px", "-8px", "0deg"],
+    [6814, "0px", "0px", "-8px", "0deg"],
+  ] as const;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden"
-      style={{
-        background: "rgba(0,0,0,0.75)",
-        backdropFilter: "blur(6px)",
-        WebkitBackdropFilter: "blur(6px)",
-      }}
-    >
-      {/* Spotlight glow */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-0.5"
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 50% at 50% 55%, rgba(98,141,56,0.45) 0%, transparent 70%)",
-          animation: "spotlight 2.4s ease-in-out infinite",
-        }}
-      />
-
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/75 backdrop-blur-[6px]">
+      <div className="pointer-events-none absolute inset-0 opacity-50" style={{ background: "radial-gradient(ellipse 70% 50% at 50% 55%, rgba(98,141,56,.45), transparent 70%)" }} />
       {!showResult ? (
-        <div
-          className="relative flex items-center justify-center"
-          style={{ width: "330px", height: "430px" }}
-        >
-          {/* Card back — peeks, shoots up, lands large */}
-          <div
-            className="absolute z-0 flex justify-center"
-            style={{ width: "260px" }}
-          >
-            <img
-              src={assets.cardBackImage}
-              alt=""
-              draggable={false}
+        <div className="relative flex h-[560px] w-[330px] items-center justify-center" aria-label="카드팩 개봉 중">
+          {particles.map((particle, index) => (
+            <span
+              key={index}
+              className="absolute left-1/2 top-[47%] z-30 block h-[7px] w-[7px]"
               style={{
-                width: cardLand ? "220px" : "160px",
-                transition: cardTransition,
-                transform: cardTransform,
-                opacity: cardOpacity,
-                filter:
-                  "drop-shadow(0 12px 32px rgba(0,0,0,0.7))",
-              }}
+                clipPath: index % 2 ? "polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%)" : undefined,
+                borderRadius: index % 2 ? undefined : "50%",
+                background: index % 4 === 0 ? "#9fe1ff" : index % 4 === 1 ? "#f6f0c9" : "#fff",
+                animation: "burstParticle 8s cubic-bezier(.5,0,.5,1) 1 both",
+                "--burst-x": `${particle.x}px`, "--burst-y": `${particle.y}px`,
+                "--burst-x2": `${particle.x2}px`, "--burst-y2": `${particle.y2}px`,
+              } as React.CSSProperties}
             />
-          </div>
+          ))}
 
-          {/* Pack top half — flies up on cut, fades when packGone */}
-          <div
-            className="absolute z-10"
-            style={{
-              top: "14px",
-              transition:
-                "transform 0.7s cubic-bezier(0.34,1.56,0.64,1), opacity 0.5s ease",
-              transform: cut
-                ? "translateY(-40px)"
-                : "translateY(0px)",
-              opacity: packGone ? 0 : 1,
-            }}
-          >
-            <div style={{ overflow: "hidden", height: "108px" }}>
-              <img
-                src={imgCardPack}
-                alt=""
-                className="drop-shadow-2xl"
-                style={{ width: "298.36px", height: "402.23px" }}
-              />
-            </div>
-          </div>
-
-          {/* Pack bottom half — slides down, fades when packGone */}
-          <div
-            className="absolute z-10"
-            style={{
-              bottom: "14px",
-              transition:
-                "transform 0.7s cubic-bezier(0.34,1.56,0.64,1), opacity 0.5s ease",
-              transform: cut
-                ? "translateY(80px)"
-                : "translateY(0px)",
-              opacity: packGone ? 0 : 1,
-            }}
-          >
+          {cardLaunches.map(([delay, startX, bumpX, endX, rotation], index) => (
             <div
-              style={{
-                overflow: "hidden",
-                height: "294.23px",
-                marginTop: "-108px",
-              }}
+              key={delay}
+              className="absolute left-1/2 top-[205px] w-[150px] -translate-x-1/2"
+              style={{ zIndex: 10 + index }}
             >
               <img
-                src={imgCardPack}
+                src={assets.cardBackImage}
                 alt=""
-                className="drop-shadow-2xl"
+                draggable={false}
+                className="block w-full opacity-0 drop-shadow-2xl"
                 style={{
-                  width: "298.36px",
-                  height: "402.23px",
-                  marginTop: "-108px",
-                }}
+                  animation: `revealCardLaunch 800ms cubic-bezier(.5,0,.5,1) ${delay}ms 1 both`,
+                  "--start-x": startX,
+                  "--bump-x": bumpX,
+                  "--end-x": endX,
+                  "--start-r": rotation,
+                } as React.CSSProperties}
               />
             </div>
+          ))}
+
+          <div className="absolute left-1/2 top-[120px] z-20 h-[420px] w-[310px] -translate-x-1/2">
+            <div
+              className="relative h-full w-full"
+              style={{ animation: "packBodyExit 8s cubic-bezier(.5,0,.5,1) 1 both" }}
+            >
+              <img
+                src={imgCardPackBottom}
+                alt=""
+                draggable={false}
+                className="absolute left-1/2 top-[87px] w-[310px] -translate-x-1/2 drop-shadow-2xl"
+              />
+              <div className="absolute top-0 w-[310px] -translate-x-1/2" style={{ left: "calc(50% + 10px)" }}>
+                <img
+                  src={imgCardPackTop}
+                  alt=""
+                  draggable={false}
+                  className="block w-full drop-shadow-2xl"
+                  style={{ transformOrigin: "92.9% 95.4%", animation: "packTopTear 8s cubic-bezier(.5,0,.5,1) 1 both" }}
+                />
+              </div>
+              <div className="absolute left-[22px] right-[22px] top-[86px] h-[12px] origin-top bg-white/80 shadow-[0_0_14px_#9fe1ff]" style={{ animation: "packCutOpen 8s cubic-bezier(.5,0,.5,1) 1 both" }} />
+              {Array.from({ length: 11 }, (_, index) => (
+                <span
+                  key={`seam-sparkle-${index}`}
+                  className="pointer-events-none absolute top-[87px] z-30 h-[10px] w-[10px] bg-white"
+                  style={{
+                    left: `${8 + index * 8.4}%`,
+                    clipPath: "polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%)",
+                    filter: "drop-shadow(0 0 6px #9fe1ff)",
+                    animation: `packSeamSparkle 900ms ease-out ${600 + index * 65}ms 1 both`,
+                  }}
+                  aria-hidden="true"
+                />
+              ))}
+            </div>
           </div>
+
         </div>
       ) : (
-        <ResultOverlay
-          characterName={characterName}
-          assets={assets}
-          onRegister={onRegister}
-        />
+        <ResultOverlay characterName={characterName} assets={assets} onRegister={onRegister} />
       )}
     </div>
   );
@@ -1656,6 +1865,13 @@ function ClassicV2Version() {
 
   const handleConvert = useCallback(async () => {
     if (!isButtonActive) return;
+    const processingStartedAt = Date.now();
+    const waitForProcessingMinimum = () => {
+      const remainingMs =
+        PROCESSING_MIN_DURATION_MS - (Date.now() - processingStartedAt);
+      if (remainingMs <= 0) return Promise.resolve();
+      return new Promise((resolve) => window.setTimeout(resolve, remainingMs));
+    };
     trackEvent("convert_started", {
       name_length: characterName.trim().length,
       is_preview: isPreviewMode,
@@ -1665,7 +1881,7 @@ function ClassicV2Version() {
     setPhase("processing");
 
     if (isPreviewMode) {
-      await new Promise((resolve) => window.setTimeout(resolve, 1400));
+      await waitForProcessingMinimum();
       setGeneratedAssets(FALLBACK_CARD_ASSETS);
       setPhase("pack");
       trackEvent("convert_completed", {
@@ -1697,6 +1913,7 @@ function ClassicV2Version() {
         return;
       }
       setGeneratedAssets(getGeneratedCardAssets(payload));
+      await waitForProcessingMinimum();
       setPhase("pack");
       trackEvent("convert_completed", {
         mode: "api",
@@ -1814,7 +2031,7 @@ function ClassicV2Version() {
           draggable={false}
         />
 
-        {phase !== "idle" && (
+        {phase !== "idle" && phase !== "processing" && phase !== "pack" && (
           <div className="mb-2 flex justify-center gap-2">
             {[1, 2, 3].map((step) => (
               <div
@@ -1829,7 +2046,7 @@ function ClassicV2Version() {
           </div>
         )}
 
-        {phase === "idle" && (
+        {(phase === "idle" || phase === "processing" || phase === "pack") && (
           <div className="mx-auto mt-[18.79px] w-[330.944px] max-w-full">
             <WindowPanel>
             <div className="flex flex-col items-center px-[25px] pb-[28.6px] pt-0">
@@ -1991,7 +2208,7 @@ function ClassicV2Version() {
         )}
 
         {phase === "processing" && (
-          <ProcessingPanel />
+          <ProcessingPanel uploadedImage={uploadedImage} />
         )}
 
         {phase === "pack" && (
