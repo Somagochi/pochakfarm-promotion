@@ -916,15 +916,30 @@ function OnboardingCarousel({
 }) {
   const [activeSlide, setActiveSlide] = useState(initialSlide);
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const scrollTimerRef = useRef<number>();
+  const scrollRafRef = useRef<number>();
+  const autoPlayTimerRef = useRef<number>();
 
-  useEffect(() => {
-    const timer = window.setInterval(() => {
+  const restartAutoPlay = useCallback(() => {
+    if (autoPlayTimerRef.current) {
+      window.clearInterval(autoPlayTimerRef.current);
+    }
+    autoPlayTimerRef.current = window.setInterval(() => {
       setActiveSlide((slide) => (slide + 1) % ONBOARDING_SLIDES.length);
     }, 4000);
-
-    return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    restartAutoPlay();
+
+    return () => {
+      if (autoPlayTimerRef.current) {
+        window.clearInterval(autoPlayTimerRef.current);
+      }
+      if (scrollRafRef.current) {
+        window.cancelAnimationFrame(scrollRafRef.current);
+      }
+    };
+  }, [restartAutoPlay]);
 
   useEffect(() => {
     const scroller = scrollerRef.current;
@@ -940,16 +955,23 @@ function OnboardingCarousel({
     const scroller = scrollerRef.current;
     if (!scroller) return;
 
-    if (scrollTimerRef.current) {
-      window.clearTimeout(scrollTimerRef.current);
+    if (scrollRafRef.current) {
+      window.cancelAnimationFrame(scrollRafRef.current);
     }
 
-    scrollTimerRef.current = window.setTimeout(() => {
-      const nextSlide = Math.round(scroller.scrollLeft / scroller.clientWidth);
+    scrollRafRef.current = window.requestAnimationFrame(() => {
+      const slides = Array.from(scroller.children) as HTMLElement[];
+      const nextSlide = slides.reduce((closestIndex, slide, index) => {
+        const closestDistance = Math.abs(
+          slides[closestIndex].offsetLeft - scroller.scrollLeft,
+        );
+        const currentDistance = Math.abs(slide.offsetLeft - scroller.scrollLeft);
+        return currentDistance < closestDistance ? index : closestIndex;
+      }, 0);
       setActiveSlide(
         Math.max(0, Math.min(ONBOARDING_SLIDES.length - 1, nextSlide)),
       );
-    }, 120);
+    });
   }, []);
 
   return (
@@ -957,6 +979,7 @@ function OnboardingCarousel({
       <div
         ref={scrollerRef}
         onScroll={handleScroll}
+        onPointerDown={restartAutoPlay}
         className={`${className} mx-auto flex h-[291px] w-[264px] snap-x snap-mandatory overflow-x-auto scroll-smooth`}
         style={{
           scrollbarWidth: "none",
@@ -989,6 +1012,7 @@ function OnboardingCarousel({
               trackEvent("onboarding_slide_selected", {
                 slide_index: index + 1,
               });
+              restartAutoPlay();
               setActiveSlide(index);
             }}
             className={`h-[6px] rounded-full transition-all ${

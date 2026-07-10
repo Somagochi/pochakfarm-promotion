@@ -151,8 +151,8 @@ function getCharacterizationDetailEndpoint(endpoint, characterizationId) {
     throw httpError(400, "characterization_id가 필요해요.");
   }
 
-  const baseEndpoint = endpoint.replace(/\/+$/, "").replace(/\/public$/, "");
-  return `${baseEndpoint}/${encodeURIComponent(id)}`;
+  const publicEndpoint = getPublicCharacterizationEndpoint(endpoint);
+  return `${publicEndpoint}/${encodeURIComponent(id)}`;
 }
 
 function parseDataImage(image) {
