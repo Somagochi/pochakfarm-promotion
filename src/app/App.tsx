@@ -4,6 +4,7 @@
   useEffect,
   useCallback,
 } from "react";
+import { XIcon } from "lucide-react";
 import { trackEvent } from "../analytics";
 import imgBtnSmall from "../assets/ui/btn-sm.png";
 import imgBtnSmall2 from "../assets/ui/btn-sm-2.png";
@@ -1832,6 +1833,7 @@ function ClassicV2Version() {
       isSharedCta ? FALLBACK_CARD_ASSETS : null,
     );
   const [characterName, setCharacterName] = useState(sharedCtaName);
+  const [nameError, setNameError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [generationError, setGenerationError] = useState("");
   const [showImageGuide, setShowImageGuide] = useState(false);
@@ -1839,6 +1841,7 @@ function ClassicV2Version() {
     "cta" | "complete" | null
   >(isSharedCta ? "cta" : null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isNameComposingRef = useRef(false);
   const isButtonActive =
     !!uploadedImage && characterName.trim().length > 0;
   const isPreviewMode = searchParams.get("preview") === "1";
@@ -1893,12 +1896,8 @@ function ClassicV2Version() {
     async function loadSharedCharacterization() {
       try {
         const url = new URL(
-          "/api/characterizations/public",
+          `/api/characterizations/public/${encodeURIComponent(sharedCharacterizationId)}`,
           window.location.origin,
-        );
-        url.searchParams.set(
-          "characterization_id",
-          sharedCharacterizationId,
         );
 
         const response = await fetch(url.toString(), {
@@ -2055,8 +2054,17 @@ function ClassicV2Version() {
     setUploadedImage(null);
     setGeneratedAssets(null);
     setCharacterName("");
+    setNameError("");
     setRegistrationView(null);
     setGenerationError("");
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    window.requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    });
   }, []);
 
   const stepIndex =
@@ -2261,22 +2269,71 @@ function ClassicV2Version() {
                 type="text"
                 value={characterName}
                 onChange={(e) => {
-                  setCharacterName(
-                    e.target.value.replace(NAME_FILTER, "").slice(0, 6),
-                  );
+                  const value = e.target.value;
+                  if (Array.from(value).length > 6) {
+                    setNameError("이름은 최대 6글자까지 입력할 수 있어요");
+                    return;
+                  }
+                  if (isNameComposingRef.current || e.nativeEvent.isComposing) {
+                    setCharacterName(value);
+                    return;
+                  }
+                  const filteredValue = value.replace(NAME_FILTER, "");
+                  setCharacterName(filteredValue);
+                  setNameError("");
+                }}
+                onBeforeInput={(e) => {
+                  const inputEvent = e.nativeEvent as InputEvent;
+                  const target = e.currentTarget;
+                  const hasSelection = target.selectionStart !== target.selectionEnd;
+                  if (
+                    inputEvent.inputType?.startsWith("insert") &&
+                    !inputEvent.isComposing &&
+                    !hasSelection &&
+                    Array.from(target.value).length >= 6
+                  ) {
+                    e.preventDefault();
+                    setNameError("이름은 최대 6글자까지 입력할 수 있어요");
+                  }
+                }}
+                onCompositionStart={(e) => {
+                  isNameComposingRef.current = true;
+                  if (Array.from(e.currentTarget.value).length >= 6) {
+                    setNameError("이름은 최대 6글자까지 입력할 수 있어요");
+                  }
+                }}
+                onCompositionEnd={(e) => {
+                  isNameComposingRef.current = false;
+                  const filteredValue = e.currentTarget.value.replace(NAME_FILTER, "");
+                  if (Array.from(filteredValue).length > 6) {
+                    setCharacterName(Array.from(filteredValue).slice(0, 6).join(""));
+                    setNameError("이름은 최대 6글자까지 입력할 수 있어요");
+                    return;
+                  }
+                  setCharacterName(filteredValue);
+                  setNameError("");
                 }}
                 maxLength={6}
                 placeholder="이름을 작성해주세요"
                 className="mt-[22px] h-[56px] w-[250px] rounded-[12px] bg-white px-4 text-[15px] tracking-[0.4px] text-[#32322d] placeholder:text-[14px] placeholder:tracking-[0.2px] placeholder:text-[#c9c2b4] focus:outline-none focus:ring-2 focus:ring-[#628d38]"
                 style={{
-                  fontFamily: "Elice DX Neolli",
-                  fontWeight: 300,
+                  fontFamily:
+                    '"Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif',
+                  fontWeight: 400,
                   border: "1px solid #e5dece",
                   boxShadow: "0 2px 6px rgba(104,85,62,0.06)",
                 }}
               />
 
-              <div className="mt-[30.77px]">
+              <p
+                className="mt-[7px] min-h-[14px] text-center text-[10px] leading-[1.4] tracking-[0.25px] text-[#c84f3d]"
+                style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
+                role={nameError ? "alert" : undefined}
+              >
+                {nameError}
+              </p>
+
+              <div className="mt-[16px]">
                 <PixelButton
                   onClick={handleConvert}
                   disabled={!isButtonActive}
@@ -2377,12 +2434,18 @@ function ClassicV2Version() {
               className="block w-full object-contain"
               draggable={false}
             />
+            <div
+              className="pointer-events-none absolute right-0 top-0 z-[2] h-[28px] w-[28px] bg-[#f2ebdd]"
+              aria-hidden="true"
+            />
             <button
               type="button"
-              className="absolute right-0 top-0 z-[3] h-[76px] w-[76px] bg-transparent"
+              className="absolute right-[16px] top-[14px] z-[3] flex h-[40px] w-[40px] items-center justify-center bg-transparent text-[#9d9b91]"
               aria-label="이미지 가이드 닫기"
               onClick={() => setShowImageGuide(false)}
-            />
+            >
+              <XIcon className="h-[24px] w-[24px]" strokeWidth={3} />
+            </button>
           </div>
         </div>
       )}
