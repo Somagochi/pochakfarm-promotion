@@ -53,8 +53,9 @@ import imgCornerBLb from "../imports/2200포착-7/4e013676febbb1c8d774637eb5341c
 import imgEdgeBot from "../imports/2200포착-7/1e2ded9ef440b7f889fcfee3c5936e0f36da63c2.png";
 import imgCornerBR from "../imports/2200포착-7/38b961cc3cce7fcaa6c20191eb623633d23043b4.png";
 
-// Card pack (POCHAKFARM green pack)
-import imgCardPack from "../assets/ui/card-pack.png";
+// Sliced card-pack pieces
+import imgCardPackTop from "../assets/ui/card-pack-top.png";
+import imgCardPackBottom from "../assets/ui/card-pack-bottom.png";
 
 // Dog pixel-art SVG component (inline JSX — avoids SVG file import issues)
 import FigmaDog from "../imports/Frame427322333/index";
@@ -171,6 +172,63 @@ const KEYFRAMES = `
     18%{opacity:.9}
     58%{opacity:1;transform:translate3d(0,-8px,0) rotate(0deg) scale(1.08,1.15)}
     100%{opacity:1;transform:translate3d(0,-8px,0) rotate(0deg) scale(1.52,1.62)}
+  }
+  @keyframes packReadyMotion {
+    0%{transform:translate(0,0) rotate(0deg) scale(1)}
+    16.67%{transform:translate(4px,-22px) rotate(1deg) scale(1.1)}
+    33.36%{transform:translate(1px,21px) rotate(-4.05deg) scale(1.1)}
+    50.01%{transform:translate(4px,-22px) rotate(1deg) scale(1.1)}
+    66.68%{transform:translate(1px,21px) rotate(-4.05deg) scale(1.1)}
+    79.99%{transform:translate(4px,-22px) rotate(1deg) scale(1.1)}
+    100%{transform:translate(0,0) rotate(0deg) scale(1)}
+  }
+  @keyframes packPromptMotion {
+    0%{opacity:0;transform:translateX(0) scale(.5)}
+    16.67%{opacity:1;transform:translateX(0) scale(1.1)}
+    33.36%{opacity:1;transform:translateX(17px) scaleX(.81)}
+    50%{opacity:1;transform:translateX(-9px) scaleX(1)}
+    66.68%{opacity:1;transform:translateX(19px) scaleX(.81)}
+    79.99%{opacity:1;transform:translateX(-9px) scaleX(1)}
+    100%{opacity:1;transform:translateX(0) scale(1)}
+  }
+  @keyframes cutGuideBlink {
+    0%,20%,40%,100%{opacity:1}
+    10%,30%{opacity:.3}
+  }
+  @keyframes cutHandlePulse {
+    0%,100%{transform:translate(-50%,-50%) scale(1)}
+    50%{transform:translate(-50%,-50%) scale(1.12)}
+  }
+  @keyframes packTopTear {
+    0%,7.5%{transform:rotate(0deg);opacity:1}
+    12.46%{transform:rotate(10deg);opacity:1}
+    25%,100%{transform:rotate(30deg);opacity:0}
+  }
+  @keyframes packCutOpen {
+    0%,12.46%{transform:scaleY(0)}
+    25%{transform:scaleY(1)}
+    33.84%{transform:scaleY(.5)}
+    62.5%,100%{transform:scaleY(0)}
+  }
+  @keyframes packSeamSparkle {
+    0%{transform:translate(-50%,-50%) rotate(0deg) scale(0);opacity:0}
+    35%{transform:translate(-50%,-50%) rotate(45deg) scale(1);opacity:1}
+    100%{transform:translate(-50%,-50%) rotate(90deg) scale(0);opacity:0}
+  }
+  @keyframes burstParticle {
+    0%{transform:translate(0,0) scale(0);opacity:0}
+    10%{transform:translate(var(--burst-x),var(--burst-y)) scale(1);opacity:1}
+    15%{transform:translate(var(--burst-x),var(--burst-y)) scale(1);opacity:1}
+    25%,100%{transform:translate(var(--burst-x2),var(--burst-y2)) scale(0);opacity:0}
+  }
+  @keyframes revealCardLaunch {
+    0%{transform:translate(var(--start-x),35px) rotate(var(--start-r)) scale(1);opacity:1}
+    20%{transform:translate(var(--bump-x),18px) rotate(0deg) scale(1);opacity:1}
+    100%{transform:translate(var(--end-x),-790px) rotate(0deg) scaleY(.9);opacity:1}
+  }
+  @keyframes packBodyExit {
+    0%,87.54%{translate:0 0}
+    92.53%,100%{translate:0 390px}
   }
 `;
 
@@ -1167,6 +1225,8 @@ function PixelGeneratingModal() {
 
 // ── CardPackPanel — tap to open ───────────────────────────────
 function CardPackPanel({ onOpen }: { onOpen: () => void }) {
+  const [stage, setStage] = useState<"ready" | "cut">("ready");
+
   return (
     <div
       className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-6"
@@ -1198,275 +1258,258 @@ function CardPackPanel({ onOpen }: { onOpen: () => void }) {
           >
             Card Pack Ready
           </p>
-          <img
-            src={CARD_PACK_OPEN_PROMPT_IMAGE}
-            alt="완성된 카드팩을 클릭해 열어보세요"
-            className="mt-[18px] h-auto w-[270px] max-w-full object-contain"
-            draggable={false}
-          />
+          {stage === "ready" ? (
+            <img
+              src={CARD_PACK_OPEN_PROMPT_IMAGE}
+              alt="완성된 카드팩을 클릭해 열어보세요"
+              className="mt-[18px] h-auto w-[270px] max-w-full object-contain"
+              draggable={false}
+              style={{ animation: "packPromptMotion 10s linear infinite" }}
+            />
+          ) : (
+            <p
+              className="mt-[18px] text-center text-[15px] leading-[1.5] tracking-[.4px] text-white"
+              style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+            >
+              절취선을 따라 옆으로 밀어주세요
+            </p>
+          )}
         </div>
         <div className="relative flex h-[360px] w-full items-center justify-center overflow-visible">
-          <button
-            type="button"
-            onClick={onOpen}
-            className="block cursor-pointer focus:outline-none"
-            aria-label="카드팩 열기"
-          >
-            <RotatingCardPack />
-          </button>
+          {stage === "ready" ? (
+            <button
+              type="button"
+              onClick={() => {
+                trackEvent("card_pack_cut_ready");
+                setStage("cut");
+              }}
+              className="block cursor-pointer focus:outline-none"
+              aria-label="카드팩 자르기 시작"
+            >
+              <ReadyCardPack />
+            </button>
+          ) : (
+            <CuttableCardPack onCut={onOpen} />
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function RotatingCardPack() {
-  const [angle, setAngle] = useState(0);
-  const rafRef = useRef<number>();
-  const lastTimeRef = useRef<number>();
-
-  useEffect(() => {
-    const spin = (time: number) => {
-      if (lastTimeRef.current !== undefined) {
-        setAngle((prev) => prev + (time - lastTimeRef.current!) * 0.045);
-      }
-      lastTimeRef.current = time;
-      rafRef.current = requestAnimationFrame(spin);
-    };
-    rafRef.current = requestAnimationFrame(spin);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, []);
-
+function ReadyCardPack() {
   return (
     <div
       className="relative h-[280px] w-[208px]"
       style={{
-        perspective: "900px",
         filter: "drop-shadow(0 18px 28px rgba(0,0,0,0.45))",
+        animation: "packReadyMotion 10s linear infinite",
       }}
     >
+      <img src={CARD_PACK_FRONT_IMAGE} alt="" className="h-full w-full object-contain" draggable={false} />
+    </div>
+  );
+}
+
+function CuttableCardPack({ onCut }: { onCut: () => void }) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [progress, setProgress] = useState(0);
+  const draggingRef = useRef(false);
+  const completedRef = useRef(false);
+
+  const updateProgress = useCallback((clientX: number) => {
+    const rect = trackRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const next = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    setProgress(next);
+    if (next >= .88 && !completedRef.current) {
+      completedRef.current = true;
+      draggingRef.current = false;
+      trackEvent("card_pack_cut_completed");
+      window.setTimeout(onCut, 180);
+    }
+  }, [onCut]);
+
+  return (
+    <div
+      className="relative h-[280px] w-[208px] touch-none select-none"
+      aria-label="카드팩 절취선 드래그 영역"
+      style={{
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        WebkitTouchCallout: "none",
+        WebkitTapHighlightColor: "transparent",
+      }}
+      onDragStart={(event) => event.preventDefault()}
+    >
+      <img
+        src={CARD_PACK_FRONT_IMAGE}
+        alt=""
+        className="pointer-events-none h-full w-full select-none object-contain drop-shadow-2xl"
+        draggable={false}
+        style={{ WebkitUserDrag: "none", userSelect: "none", WebkitUserSelect: "none" }}
+      />
       <div
-        className="relative h-full w-full"
+        ref={trackRef}
+        className="absolute left-[7%] right-[7%] top-[15.5%] h-[42px] cursor-ew-resize touch-none"
         style={{
-          transformStyle: "preserve-3d",
-          transform: `rotateY(${angle}deg)`,
+          touchAction: "none",
+          userSelect: "none",
+          WebkitUserSelect: "none",
+          WebkitTouchCallout: "none",
+          WebkitTapHighlightColor: "transparent",
+        }}
+        onPointerDown={(event) => {
+          event.preventDefault();
+          draggingRef.current = true;
+          event.currentTarget.setPointerCapture(event.pointerId);
+          updateProgress(event.clientX);
+        }}
+        onPointerMove={(event) => {
+          if (draggingRef.current) updateProgress(event.clientX);
+        }}
+        onPointerUp={(event) => {
+          draggingRef.current = false;
+          event.currentTarget.releasePointerCapture(event.pointerId);
+          if (!completedRef.current && progress < .88) setProgress(0);
+        }}
+        onPointerCancel={() => {
+          draggingRef.current = false;
+          if (!completedRef.current) setProgress(0);
         }}
       >
-        {[3, 6, 9, 12].map((depth) => (
-          <img
-            key={depth}
-            src={CARD_PACK_FRONT_IMAGE}
-            alt=""
-            className="absolute inset-0 h-full w-full object-contain opacity-25"
-            draggable={false}
-            style={{
-              transform: `translateZ(${depth - 14}px)`,
-              filter: "brightness(0.72) saturate(0.9)",
-              backfaceVisibility: "hidden",
-              WebkitBackfaceVisibility: "hidden",
-            }}
-            aria-hidden="true"
-          />
-        ))}
-        <img
-          src={CARD_PACK_FRONT_IMAGE}
-          alt=""
-          className="absolute inset-0 h-full w-full object-contain"
-          draggable={false}
-          style={{
-            transform: "translateZ(14px)",
-            backfaceVisibility: "hidden",
-            WebkitBackfaceVisibility: "hidden",
-          }}
-        />
-        <img
-          src={CARD_PACK_BACK_IMAGE}
-          alt=""
-          className="absolute inset-0 h-full w-full object-contain"
-          draggable={false}
-          style={{
-            backfaceVisibility: "hidden",
-            WebkitBackfaceVisibility: "hidden",
-            transform: "rotateY(180deg) translateZ(14px)",
-          }}
-        />
+        <div className="absolute left-0 right-0 top-1/2 border-t-2 border-dashed border-white/90" style={{ animation: "cutGuideBlink 10s linear infinite" }} />
+        <div className="absolute left-0 top-1/2 h-[4px] -translate-y-1/2 rounded-full bg-[#9fe1ff] shadow-[0_0_10px_#9fe1ff]" style={{ width: `${progress * 100}%` }} />
+        <div
+          className="absolute top-1/2 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-[#628d38] text-[18px] text-white shadow-[0_0_14px_rgba(159,225,255,.9)]"
+          style={{ left: `${progress * 100}%`, animation: progress === 0 ? "cutHandlePulse 1.2s ease-in-out infinite" : undefined }}
+          aria-hidden="true"
+        >
+          ✂
+        </div>
       </div>
     </div>
   );
 }
 
 // ── PackOpeningOverlay ────────────────────────────────────────
-// Sequence: pack → cut → pack fades + card shoots up → card lands large → result
-function PackOpeningOverlay({
-  characterName,
-  assets,
-  onResult,
-  onRegister,
-}: {
+// Figma motion 6570:396 — plays once after the user finishes slicing.
+function PackOpeningOverlay({ characterName, assets, onResult, onRegister }: {
   characterName: string;
   assets: GeneratedCardAssets;
   onResult: () => void;
   onRegister?: () => void;
 }) {
-  const [cut, setCut] = useState(false); // pack splits
-  const [packGone, setPackGone] = useState(false); // pack fades out
-  const [cardUp, setCardUp] = useState(false); // card shoots upward
-  const [cardLand, setCardLand] = useState(false); // card lands from top, large
   const [showResult, setShowResult] = useState(false);
 
   useEffect(() => {
-    const timers = [
-      setTimeout(() => setCut(true), 1200), // pack splits
-      setTimeout(() => {
-        setPackGone(true);
-        setCardUp(true);
-      }, 2800), // pack fades, card shoots up
-      setTimeout(() => setCardLand(true), 3500), // card comes back down
-      setTimeout(() => {
-        setShowResult(true);
-        onResult();
-      }, 5000), // show result
-    ];
-    return () => timers.forEach(clearTimeout);
+    const timer = window.setTimeout(() => {
+      setShowResult(true);
+      onResult();
+    }, 8000);
+    return () => window.clearTimeout(timer);
   }, [onResult]);
 
-  // Card Y position across phases:
-  // before cut → hidden below
-  // after cut  → peeking (translateY 60px, small)
-  // cardUp     → shoot up off screen (translateY -120vh)
-  // cardLand   → land from top, large then settles
-  const cardTransform = (() => {
-    if (cardLand) return "translateY(-72px) scale(1)";
-    if (cardUp) return "translateY(-120vh) scale(0.8)";
-    if (cut) return "translateY(60px) scale(0.75)";
-    return "translateY(100px) scale(0.5)";
-  })();
-
-  const cardOpacity =
-    cut && !cardLand && !cardUp
-      ? 1
-      : cardLand
-        ? 1
-        : cut
-          ? 1
-          : 0;
-
-  const cardTransition = (() => {
-    if (cardUp)
-      return "transform 0.55s cubic-bezier(0.4,0,0.6,1), opacity 0.3s ease";
-    if (cardLand)
-      return "transform 0.65s cubic-bezier(0.34,1.4,0.64,1), opacity 0.4s ease";
-    return "transform 0.8s cubic-bezier(0.34,1.56,0.64,1), opacity 0.5s ease";
-  })();
+  const particles = Array.from({ length: 36 }, (_, index) => {
+    const angle = (index / 36) * Math.PI * 2;
+    const distance = 72 + (index % 5) * 12;
+    return {
+      x: Math.cos(angle) * distance,
+      y: Math.sin(angle) * distance,
+      x2: Math.cos(angle) * (distance + 20),
+      y2: Math.sin(angle) * (distance + 20),
+    };
+  });
+  const cardLaunches = [
+    [2902, "0px", "2px", "2px", "0deg"],
+    [3830, "-11px", "-7px", "-16px", "-3.4deg"],
+    [4861, "8px", "4px", "-8px", "3.4deg"],
+    [5853, "0px", "0px", "-8px", "0deg"],
+    [6814, "0px", "0px", "-8px", "0deg"],
+  ] as const;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden"
-      style={{
-        background: "rgba(0,0,0,0.75)",
-        backdropFilter: "blur(6px)",
-        WebkitBackdropFilter: "blur(6px)",
-      }}
-    >
-      {/* Spotlight glow */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-0.5"
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 50% at 50% 55%, rgba(98,141,56,0.45) 0%, transparent 70%)",
-          animation: "spotlight 2.4s ease-in-out infinite",
-        }}
-      />
-
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/75 backdrop-blur-[6px]">
+      <div className="pointer-events-none absolute inset-0 opacity-50" style={{ background: "radial-gradient(ellipse 70% 50% at 50% 55%, rgba(98,141,56,.45), transparent 70%)" }} />
       {!showResult ? (
-        <div
-          className="relative flex items-center justify-center"
-          style={{ width: "330px", height: "430px" }}
-        >
-          {/* Card back — peeks, shoots up, lands large */}
-          <div
-            className="absolute z-0 flex justify-center"
-            style={{ width: "260px" }}
-          >
-            <img
-              src={assets.cardBackImage}
-              alt=""
-              draggable={false}
+        <div className="relative flex h-[560px] w-[330px] items-center justify-center" aria-label="카드팩 개봉 중">
+          {particles.map((particle, index) => (
+            <span
+              key={index}
+              className="absolute left-1/2 top-[47%] z-30 block h-[7px] w-[7px]"
               style={{
-                width: cardLand ? "220px" : "160px",
-                transition: cardTransition,
-                transform: cardTransform,
-                opacity: cardOpacity,
-                filter:
-                  "drop-shadow(0 12px 32px rgba(0,0,0,0.7))",
-              }}
+                clipPath: index % 2 ? "polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%)" : undefined,
+                borderRadius: index % 2 ? undefined : "50%",
+                background: index % 4 === 0 ? "#9fe1ff" : index % 4 === 1 ? "#f6f0c9" : "#fff",
+                animation: "burstParticle 8s cubic-bezier(.5,0,.5,1) 1 both",
+                "--burst-x": `${particle.x}px`, "--burst-y": `${particle.y}px`,
+                "--burst-x2": `${particle.x2}px`, "--burst-y2": `${particle.y2}px`,
+              } as React.CSSProperties}
             />
-          </div>
+          ))}
 
-          {/* Pack top half — flies up on cut, fades when packGone */}
-          <div
-            className="absolute z-10"
-            style={{
-              top: "14px",
-              transition:
-                "transform 0.7s cubic-bezier(0.34,1.56,0.64,1), opacity 0.5s ease",
-              transform: cut
-                ? "translateY(-40px)"
-                : "translateY(0px)",
-              opacity: packGone ? 0 : 1,
-            }}
-          >
-            <div style={{ overflow: "hidden", height: "108px" }}>
-              <img
-                src={imgCardPack}
-                alt=""
-                className="drop-shadow-2xl"
-                style={{ width: "298.36px", height: "402.23px" }}
-              />
-            </div>
-          </div>
-
-          {/* Pack bottom half — slides down, fades when packGone */}
-          <div
-            className="absolute z-10"
-            style={{
-              bottom: "14px",
-              transition:
-                "transform 0.7s cubic-bezier(0.34,1.56,0.64,1), opacity 0.5s ease",
-              transform: cut
-                ? "translateY(80px)"
-                : "translateY(0px)",
-              opacity: packGone ? 0 : 1,
-            }}
-          >
+          {cardLaunches.map(([delay, startX, bumpX, endX, rotation], index) => (
             <div
-              style={{
-                overflow: "hidden",
-                height: "294.23px",
-                marginTop: "-108px",
-              }}
+              key={delay}
+              className="absolute left-1/2 top-[205px] w-[150px] -translate-x-1/2"
+              style={{ zIndex: 10 + index }}
             >
               <img
-                src={imgCardPack}
+                src={assets.cardBackImage}
                 alt=""
-                className="drop-shadow-2xl"
+                draggable={false}
+                className="block w-full opacity-0 drop-shadow-2xl"
                 style={{
-                  width: "298.36px",
-                  height: "402.23px",
-                  marginTop: "-108px",
-                }}
+                  animation: `revealCardLaunch 800ms cubic-bezier(.5,0,.5,1) ${delay}ms 1 both`,
+                  "--start-x": startX,
+                  "--bump-x": bumpX,
+                  "--end-x": endX,
+                  "--start-r": rotation,
+                } as React.CSSProperties}
               />
             </div>
+          ))}
+
+          <div className="absolute left-1/2 top-[120px] z-20 h-[420px] w-[310px] -translate-x-1/2">
+            <div
+              className="relative h-full w-full"
+              style={{ animation: "packBodyExit 8s cubic-bezier(.5,0,.5,1) 1 both" }}
+            >
+              <img
+                src={imgCardPackBottom}
+                alt=""
+                draggable={false}
+                className="absolute left-1/2 top-[87px] w-[310px] -translate-x-1/2 drop-shadow-2xl"
+              />
+              <div className="absolute top-0 w-[310px] -translate-x-1/2" style={{ left: "calc(50% + 10px)" }}>
+                <img
+                  src={imgCardPackTop}
+                  alt=""
+                  draggable={false}
+                  className="block w-full drop-shadow-2xl"
+                  style={{ transformOrigin: "92.9% 95.4%", animation: "packTopTear 8s cubic-bezier(.5,0,.5,1) 1 both" }}
+                />
+              </div>
+              <div className="absolute left-[22px] right-[22px] top-[86px] h-[12px] origin-top bg-white/80 shadow-[0_0_14px_#9fe1ff]" style={{ animation: "packCutOpen 8s cubic-bezier(.5,0,.5,1) 1 both" }} />
+              {Array.from({ length: 11 }, (_, index) => (
+                <span
+                  key={`seam-sparkle-${index}`}
+                  className="pointer-events-none absolute top-[87px] z-30 h-[10px] w-[10px] bg-white"
+                  style={{
+                    left: `${8 + index * 8.4}%`,
+                    clipPath: "polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%)",
+                    filter: "drop-shadow(0 0 6px #9fe1ff)",
+                    animation: `packSeamSparkle 900ms ease-out ${600 + index * 65}ms 1 both`,
+                  }}
+                  aria-hidden="true"
+                />
+              ))}
+            </div>
           </div>
+
         </div>
       ) : (
-        <ResultOverlay
-          characterName={characterName}
-          assets={assets}
-          onRegister={onRegister}
-        />
+        <ResultOverlay characterName={characterName} assets={assets} onRegister={onRegister} />
       )}
     </div>
   );
