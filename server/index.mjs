@@ -45,7 +45,7 @@ const server = createServer(async (req, res) => {
     }
 
     const characterizationMatch = pathname.match(
-      /^\/api\/characterizations\/([^/]+)$/,
+      /^\/api\/characterizations\/(?:public\/)?([^/]+)$/,
     );
     if (characterizationMatch) {
       if (req.method === "GET") {
