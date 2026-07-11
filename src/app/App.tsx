@@ -1963,9 +1963,7 @@ function ClassicV2Version() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [generatedAssets, setGeneratedAssets] =
-    useState<GeneratedCardAssets | null>(
-      isSharedCta ? FALLBACK_CARD_ASSETS : null,
-    );
+    useState<GeneratedCardAssets | null>(null);
   const [characterName, setCharacterName] = useState(sharedCtaName);
   const [nameError, setNameError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
@@ -3203,26 +3201,40 @@ function CTAPage({
             </div>
 
             <div className="relative h-[220px] w-[204px]">
-              <div className="absolute right-[10px] top-[6px] h-[206.02px] w-[143.05px] rotate-[9deg] overflow-hidden rounded-[7px]">
-                <img
-                  src={cardBackImage || imgCardBack}
-                  alt=""
-                  className="absolute left-1/2 top-1/2 h-[211px] w-[147px] max-w-none -translate-x-1/2 -translate-y-1/2 object-fill"
-                  draggable={false}
-                />
-              </div>
-              <img
-                src={cardImage || imgCharFront}
-                alt=""
-                className="absolute left-[13px] top-0 h-[206.02px] w-[143.05px] rotate-[-2deg] object-contain drop-shadow-[0_10px_14px_rgba(65,52,35,0.22)]"
-                draggable={false}
-              />
+              {cardImage ? (
+                <>
+                  <div className="absolute right-[10px] top-[6px] h-[206.02px] w-[143.05px] rotate-[9deg] overflow-hidden rounded-[7px]">
+                    <img
+                      src={cardBackImage || imgCardBack}
+                      alt=""
+                      className="absolute left-1/2 top-1/2 h-[211px] w-[147px] max-w-none -translate-x-1/2 -translate-y-1/2 object-fill"
+                      draggable={false}
+                    />
+                  </div>
+                  <img
+                    src={cardImage}
+                    alt=""
+                    className="absolute left-[13px] top-0 h-[206.02px] w-[143.05px] rotate-[-2deg] object-contain drop-shadow-[0_10px_14px_rgba(65,52,35,0.22)]"
+                    draggable={false}
+                  />
+                </>
+              ) : (
+                <div role="status" aria-label="카드 이미지를 불러오는 중">
+                  <div className="absolute right-[10px] top-[6px] h-[206.02px] w-[143.05px] rotate-[9deg] animate-pulse rounded-[7px] border border-[#d8ccb5] bg-[#e7ddca]" />
+                  <div className="absolute left-[13px] top-0 flex h-[206.02px] w-[143.05px] rotate-[-2deg] animate-pulse flex-col items-center justify-center gap-3 rounded-[7px] border border-[#d8ccb5] bg-[#f0e8d9] shadow-[0_10px_14px_rgba(65,52,35,0.14)]">
+                    <div className="h-[86px] w-[86px] rounded-[6px] bg-[#ddd1bc]" />
+                    <div className="h-[10px] w-[92px] rounded-full bg-[#ddd1bc]" />
+                    <div className="h-[8px] w-[64px] rounded-full bg-[#e3d8c5]" />
+                  </div>
+                </div>
+              )}
             </div>
 
             <button
               type="button"
               onClick={handleImageSave}
-              className="relative h-[42px] w-[105.15px] overflow-hidden text-transparent"
+              disabled={!cardImage}
+              className="relative h-[42px] w-[105.15px] overflow-hidden text-transparent disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="이미지 저장"
             >
               <img
