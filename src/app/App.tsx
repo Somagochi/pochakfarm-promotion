@@ -37,6 +37,7 @@ import imgToastPrimary from "../assets/ui/primary.png";
 import imgModalWindowBottom from "../assets/ui/modal-window-bottom.png";
 import imgModalWindowMiddle from "../assets/ui/modal-window-middle.png";
 import imgModalWindowTop from "../assets/ui/modal-window-top.png";
+import imgCutScissors from "../assets/ui/cut-scissors.png";
 
 // ── Assets ───────────────────────────────────────────────────
 // Window frame & background
@@ -877,10 +878,10 @@ function LaunchCountdownPanel() {
       <div
         className="absolute left-[15.5%] right-[15.5%] top-[45%] z-[2] flex items-center justify-between text-center text-[23px] leading-none text-white"
         style={{
-          fontFamily: "Galmuri11",
+          fontFamily: "DS-DIGIT",
           fontWeight: 700,
           textShadow:
-            "0 0 6px rgba(255,255,255,0.95), 0 0 14px rgba(210,255,255,0.85)",
+            "0 0 1.8px rgba(255,255,255,0.95), 0 0 4.2px rgba(210,255,255,0.85)",
           fontVariantNumeric: "tabular-nums",
         }}
       >
@@ -893,12 +894,12 @@ function LaunchCountdownPanel() {
         <span>{formatCountdownUnit(countdown.seconds)}</span>
       </div>
       <div
-        className="absolute left-[16%] right-[16%] top-[70.5%] z-[2] grid grid-cols-4 text-center text-[11px] leading-none text-white"
+        className="absolute left-[16%] right-[16%] top-[70.5%] z-[2] grid -translate-y-[4px] grid-cols-4 text-center text-[11px] leading-none text-white"
         style={{
-          fontFamily: "Galmuri11",
-          fontWeight: 700,
+          fontFamily: "Pretendard",
+          fontWeight: 500,
           textShadow:
-            "0 0 6px rgba(255,255,255,0.9), 0 0 12px rgba(210,255,255,0.65)",
+            "0 0 1.8px rgba(255,255,255,0.9), 0 0 3.6px rgba(210,255,255,0.65)",
         }}
       >
         <span>일</span>
@@ -1021,7 +1022,7 @@ function OnboardingCarousel({
           programmaticSlideRef.current = null;
           restartAutoPlay();
         }}
-        className={`${className} mx-auto flex h-[291px] w-[264px] snap-x snap-mandatory overflow-x-auto scroll-smooth`}
+        className={`${className} mx-auto flex h-[291px] w-[300px] snap-x snap-mandatory overflow-x-auto scroll-smooth`}
         style={{
           scrollbarWidth: "none",
           WebkitOverflowScrolling: "touch",
@@ -1492,11 +1493,11 @@ function CuttableCardPack({ onCut }: { onCut: () => void }) {
         <div className="absolute left-0 right-0 top-1/2 border-t-2 border-dashed border-white/90" style={{ animation: "cutGuideBlink 10s linear infinite" }} />
         <div className="absolute left-0 top-1/2 h-[4px] -translate-y-1/2 rounded-full bg-[#9fe1ff] shadow-[0_0_10px_#9fe1ff]" style={{ width: `${progress * 100}%` }} />
         <div
-          className="absolute top-1/2 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-[#628d38] text-[18px] text-white shadow-[0_0_14px_rgba(159,225,255,.9)]"
+          className="absolute top-[calc(50%+10px)] h-9 w-[41px] -translate-y-1/2"
           style={{ left: `${progress * 100}%`, animation: progress === 0 ? "cutHandlePulse 1.2s ease-in-out infinite" : undefined }}
           aria-hidden="true"
         >
-          ✂
+          <img src={imgCutScissors} alt="" className="h-full w-full object-contain" draggable={false} />
         </div>
       </div>
     </div>
