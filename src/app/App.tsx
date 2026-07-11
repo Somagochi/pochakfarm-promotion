@@ -859,7 +859,7 @@ function LaunchCountdownPanel() {
 
   return (
     <div
-      className="pointer-events-none absolute bottom-[48.29px] left-1/2 z-[2] w-[318px] max-w-[86%] -translate-x-1/2"
+      className="pointer-events-none absolute bottom-[62.29px] left-1/2 z-[2] w-[318px] max-w-[86%] -translate-x-1/2"
       aria-label={`출시까지 ${countdown.days}일 ${countdown.hours}시 ${countdown.minutes}분 ${countdown.seconds}초`}
     >
       <div
@@ -911,9 +911,21 @@ function LaunchCountdownPanel() {
   );
 }
 
-function IntroHeader({ onHome }: { onHome: () => void }) {
+function IntroHeader({
+  onHome,
+  overlay = false,
+}: {
+  onHome: () => void;
+  overlay?: boolean;
+}) {
   return (
-    <div className="-mx-[14px] relative w-[calc(100%+28px)] max-w-none shrink-0">
+    <div
+      className={
+        overlay
+          ? "absolute left-0 top-0 z-20 w-full max-w-none"
+          : "-mx-[14px] relative w-[calc(100%+28px)] max-w-none shrink-0"
+      }
+    >
       <img
         src={imgIntroHeader}
         alt=""
@@ -1120,7 +1132,7 @@ function ProcessingPanel({
           </p>
         </div>
 
-        <div className="relative flex h-[360px] w-full items-center justify-center overflow-hidden">
+        <div className="relative flex h-[360px] w-[min(100vw,397px)] max-w-none items-center justify-center overflow-hidden">
           {loadingStage === "scan" ? (
             <div className="relative h-[220px] w-[220px] overflow-visible">
               <div className="absolute inset-0 z-0 overflow-hidden rounded-[8px]">
@@ -2259,7 +2271,7 @@ function ClassicV2Version() {
           backgroundSize: "100% auto",
         }}
       >
-        <IntroHeader onHome={handleReset} />
+        <IntroHeader onHome={handleReset} overlay />
         <div className="-mx-[14px] relative w-[calc(100%+28px)] max-w-none shrink-0">
           <img
             src={imgIntroHero}
@@ -2272,14 +2284,14 @@ function ClassicV2Version() {
         <img
           src={imgIntroEnjoyTitle}
           alt=""
-          className="mt-[33.35px] block h-[34.19px] w-[236.99px] shrink-0"
+          className="relative z-10 mt-[-55.65px] block h-[34.19px] w-[236.99px] shrink-0"
           draggable={false}
         />
-        <OnboardingCarousel className="mt-[22.46px]" />
+        <OnboardingCarousel className="relative z-10 mt-[8.81px]" />
         <img
           src={imgIntroTryTitle}
           alt=""
-          className="mt-[74.6px] block h-[33.43px] w-[206.59px] shrink-0"
+          className="mt-[50.4px] block h-[33.43px] w-[206.59px] shrink-0"
           draggable={false}
         />
         <img
@@ -3040,6 +3052,76 @@ function EarlyRegistrationDialog({
   );
 }
 
+function HomeConfirmDialog({
+  onClose,
+  onConfirm,
+}: {
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[230] flex items-center justify-center bg-black/70 px-4"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="home-confirm-title"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="relative w-[314px] rounded-[5px] bg-[#faf5eb] px-[30px] pb-[30px] pt-[30px]"
+        style={{
+          border: "2px solid #1f1a13",
+          boxShadow: "0 4px 0 #1f1a13",
+        }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-[8px] top-[6px] flex h-8 w-8 items-center justify-center text-[28px] leading-none text-[#b7ad9a]"
+          aria-label="닫기"
+        >
+          x
+        </button>
+        <h2
+          id="home-confirm-title"
+          className="text-center text-[19px] leading-[1.4] tracking-[0.3px] text-[#36501e]"
+          style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+        >
+          잠깐! 이미지 저장하셨나요?
+        </h2>
+        <p
+          className="mt-[18px] text-center text-[12px] leading-[1.6] tracking-[0.25px] text-[#6a6a61]"
+          style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
+        >
+          지금 홈으로 돌아가면 이미지를
+          <br />
+          다시 확인할 수 없어요
+        </p>
+        <div className="mt-[26px] grid grid-cols-2 gap-[10px]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-[46px] items-center justify-center rounded-[6px] border-2 border-[#36501e] bg-[#faf5eb] text-[14px] tracking-[0.7px] text-[#36501e]"
+            style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+          >
+            뒤로가기
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex h-[46px] items-center justify-center rounded-[6px] bg-[#36501e] text-[14px] tracking-[0.7px] text-white"
+            style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+          >
+            홈으로
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CTAPage({
   characterName,
   cardImage,
@@ -3059,6 +3141,7 @@ function CTAPage({
 }) {
   const [showDialog, setShowDialog] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const [showHomeConfirm, setShowHomeConfirm] = useState(false);
 
   useEffect(() => {
     trackEvent("cta_page_viewed", {
@@ -3225,7 +3308,7 @@ function CTAPage({
                 type="button"
                 onClick={() => {
                   trackEvent("cta_home_clicked");
-                  onCreateNew();
+                  setShowHomeConfirm(true);
                 }}
                 className="mt-[3px] cursor-pointer text-[11px] tracking-[0.35px] text-[#6a6a61] transition-colors hover:text-[#32322d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#628d38]/60"
                 style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
@@ -3281,6 +3364,16 @@ function CTAPage({
             trackEvent("cta_registration_completed");
             setShowDialog(false);
             onComplete();
+          }}
+        />
+      )}
+      {showHomeConfirm && (
+        <HomeConfirmDialog
+          onClose={() => setShowHomeConfirm(false)}
+          onConfirm={() => {
+            trackEvent("cta_home_confirmed");
+            setShowHomeConfirm(false);
+            onCreateNew();
           }}
         />
       )}
