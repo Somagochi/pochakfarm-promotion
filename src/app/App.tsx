@@ -241,12 +241,17 @@ const KEYFRAMES = `
     92.53%,100%{translate:0 390px}
   }
   @keyframes cardSkyArrive {
-    0%{left:50%;top:50%;transform:translate(-50%,-50%) rotate(120deg) skewY(30deg) scale(0);opacity:0}
-    33%{left:50%;top:50%;transform:translate(-50%,-50%) rotate(0deg) skewY(0deg) scale(1.875);opacity:1}
+    0%{left:50%;top:50%;transform:translate(-50%,-50%) scale(.01);opacity:0}
+    33%{left:50%;top:50%;transform:translate(-50%,-50%) scale(1.875);opacity:1}
     50%{transform:translate(-50%,-50%) scale(1.625);opacity:1}
     64%{transform:translate(-50%,-50%) scale(1.75);opacity:1}
     81%{transform:translate(-50%,-50%) scale(.875);opacity:1}
     100%{left:var(--sky-x);top:var(--sky-y);transform:translate(-50%,-50%) scale(1);opacity:1}
+  }
+  @keyframes cardSkySpin {
+    0%{transform:rotate(120deg) skewY(30deg)}
+    55%{transform:rotate(0deg) skewY(0deg)}
+    100%{transform:rotate(0deg) skewY(0deg)}
   }
 `;
 
@@ -1698,16 +1703,23 @@ function CardSkyScene({
             zIndex: index + 1,
           } as React.CSSProperties}
         >
-          <img
-            src={cardBackImage}
-            alt=""
-            draggable={false}
-            className={`block w-full select-none rounded-[8px] transition-[transform,filter] duration-200 ease-out ${
-              canSelect
-                ? "group-hover:-translate-y-2 group-hover:scale-110 group-hover:brightness-110 group-hover:drop-shadow-[0_0_20px_rgba(255,220,80,.95)] group-focus-visible:-translate-y-2 group-focus-visible:scale-110 group-focus-visible:brightness-110 group-focus-visible:drop-shadow-[0_0_20px_rgba(255,220,80,.95)] group-active:scale-105"
-                : ""
-            }`}
-          />
+          <div
+            className="w-full will-change-transform"
+            style={{
+              animation: `cardSkySpin 1200ms cubic-bezier(.22,.61,.36,1) ${card.delay}ms 1 both`,
+            }}
+          >
+            <img
+              src={cardBackImage}
+              alt=""
+              draggable={false}
+              className={`block w-full select-none rounded-[8px] transition-[transform,filter] duration-200 ease-out ${
+                canSelect
+                  ? "group-hover:-translate-y-2 group-hover:scale-110 group-hover:brightness-110 group-hover:drop-shadow-[0_0_20px_rgba(255,220,80,.95)] group-focus-visible:-translate-y-2 group-focus-visible:scale-110 group-focus-visible:brightness-110 group-focus-visible:drop-shadow-[0_0_20px_rgba(255,220,80,.95)] group-active:scale-105"
+                  : ""
+              }`}
+            />
+          </div>
         </button>
       ))}
       {canSelect && (
