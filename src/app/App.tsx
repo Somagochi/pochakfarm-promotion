@@ -142,7 +142,12 @@ const ONBOARDING_SLIDES = [
   "/assets/carousel4.png",
 ];
 const LAUNCH_TARGET_TIME = new Date("2026-08-01T00:00:00+09:00").getTime();
+const PROCESSING_ANALYZING_PROMPT_IMAGE =
+  "/assets/processing-analyzing-prompt.png";
+const PROCESSING_SELECTING_PROMPT_IMAGE =
+  "/assets/processing-selecting-prompt.png";
 const CARD_PACK_OPEN_PROMPT_IMAGE = "/assets/card-pack-open-prompt.png";
+const CARD_PACK_CUT_PROMPT_IMAGE = "/assets/card-pack-cut-prompt.png";
 const CARD_PACK_FRONT_IMAGE = "/assets/card-pack-front.png";
 const CARD_PACK_BACK_IMAGE = "/assets/card-pack-back.png";
 const CARD_SELECT_FRONT_DELAYS = [
@@ -1102,7 +1107,7 @@ function ProcessingPanel({
       <div className="flex h-[640px] w-[330px] max-w-full translate-y-[24px] flex-col items-center">
         <div className="flex h-[118px] w-full flex-col items-center justify-start pt-[8px]">
           <p
-            className="text-center text-[20px] tracking-[2px]"
+            className="translate-y-[16px] text-center text-[20px] tracking-[2px]"
             style={{
               fontFamily: "Galmuri11",
               fontWeight: 700,
@@ -1119,17 +1124,20 @@ function ProcessingPanel({
           >
             {loadingStage === "scan" ? "ANALYZING..." : "Select..."}
           </p>
-          <p
-            className="mt-[16px] text-center text-[14px] tracking-[0.4px] text-white"
-            style={{
-              fontFamily: "Elice DX Neolli",
-              fontWeight: 500,
-            }}
-          >
-            {loadingStage === "scan"
-              ? "사진 속 동물을 분석하고 있어요"
-              : "적합한 카드팩을 선정하고 있어요"}
-          </p>
+          <img
+            src={
+              loadingStage === "scan"
+                ? PROCESSING_ANALYZING_PROMPT_IMAGE
+                : PROCESSING_SELECTING_PROMPT_IMAGE
+            }
+            alt={
+              loadingStage === "scan"
+                ? "사진 속 동물을 분석하고 있어요"
+                : "적합한 카드팩을 선정하고 있어요"
+            }
+            className="mt-[8px] h-auto w-[270px] max-w-full object-contain"
+            draggable={false}
+          />
         </div>
 
         <div className="relative flex h-[360px] w-[min(100vw,397px)] max-w-none items-center justify-center overflow-hidden">
@@ -1333,7 +1341,7 @@ function CardPackPanel({
       <div className="flex h-[640px] w-[330px] max-w-full translate-y-[24px] flex-col items-center">
         <div className="flex h-[118px] w-full flex-col items-center justify-start pt-[2px]">
           <p
-            className="text-center text-[34px] leading-none tracking-[1.2px]"
+            className="translate-y-[16px] text-center text-[34px] leading-none tracking-[1.2px]"
             style={{
               fontFamily: "Galmuri11",
               fontWeight: 700,
@@ -1354,20 +1362,19 @@ function CardPackPanel({
             <img
               src={CARD_PACK_OPEN_PROMPT_IMAGE}
               alt="완성된 카드팩을 클릭해 열어보세요"
-              className="mt-[18px] h-auto w-[270px] max-w-full object-contain"
+              className="mt-[8px] h-auto w-[270px] max-w-full object-contain"
               draggable={false}
-              style={{ animation: "packPromptMotion 10s linear infinite" }}
             />
           ) : stage === "cut" ? (
-            <p
-              className="mt-[18px] text-center text-[15px] leading-[1.5] tracking-[.4px] text-white"
-              style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
-            >
-              절취선을 따라 옆으로 밀어주세요
-            </p>
+            <img
+              src={CARD_PACK_CUT_PROMPT_IMAGE}
+              alt="절취선을 잘라보세요"
+              className="mt-[8px] h-auto w-[180px] max-w-full object-contain"
+              draggable={false}
+            />
           ) : (
             <p
-              className="mt-[18px] text-center text-[14px] tracking-[.4px] text-white"
+              className="mt-[8px] text-center text-[14px] tracking-[.4px] text-white"
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
             >
               카드 생성을 마무리하고 있어요
