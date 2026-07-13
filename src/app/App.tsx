@@ -82,7 +82,7 @@ const UPLOAD_IMAGE_QUALITY = 0.82;
 const NAME_FILTER = /[^ㄱ-ㅎ가-힣a-zA-Z0-9\s]/g;
 const SHARE_BUTTON_FRAME_FILTER =
   "brightness(0) saturate(100%) invert(88%) sepia(13%) saturate(418%) hue-rotate(356deg) brightness(95%) contrast(88%)";
-const SHARE_LINK_ORIGIN = "http://13.209.190.156";
+const SHARE_LINK_ORIGIN = "https://pochakfarm.store";
 
 type GeneratedCardAssets = {
   cardImage: string;
@@ -1374,7 +1374,7 @@ function CardPackPanel({
             />
           ) : (
             <p
-              className="mt-[8px] text-center text-[14px] tracking-[.4px] text-white"
+              className="mt-[24px] text-center text-[14px] tracking-[.4px] text-white"
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
             >
               카드 생성을 마무리하고 있어요
