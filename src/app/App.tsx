@@ -1562,7 +1562,10 @@ function PackOpeningOverlay({ characterName, assets, onResult, onRegister }: {
   ] as const;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/75 backdrop-blur-[6px]">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/75 backdrop-blur-[6px]"
+      style={{ touchAction: "none", overscrollBehavior: "none" }}
+    >
       <div className="pointer-events-none absolute inset-0 opacity-50" style={{ background: "radial-gradient(ellipse 70% 50% at 50% 55%, rgba(98,141,56,.45), transparent 70%)" }} />
       {openingScene === "pack" ? (
         <div className="relative flex h-[560px] w-[330px] translate-y-[24px] items-center justify-center" aria-label="카드팩 개봉 중">
@@ -1814,6 +1817,7 @@ function ResultOverlay({
   };
   const onTouchMove = (e: React.TouchEvent) => {
     if (!isDragging.current) return;
+    e.preventDefault();
     const delta = e.touches[0].clientX - dragStartX.current;
     setAngle(dragStartAng.current + delta * 0.6);
   };
@@ -1861,6 +1865,8 @@ function ResultOverlay({
           userSelect: "none",
           WebkitUserSelect: "none",
           WebkitUserDrag: "none",
+          touchAction: "none",
+          overscrollBehavior: "none",
         }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
