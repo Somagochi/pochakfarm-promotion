@@ -149,6 +149,7 @@ const PROCESSING_SELECTING_PROMPT_IMAGE =
   "/assets/processing-selecting-prompt.png";
 const CARD_PACK_OPEN_PROMPT_IMAGE = "/assets/card-pack-open-prompt.png";
 const CARD_PACK_CUT_PROMPT_IMAGE = "/assets/card-pack-cut-prompt.png";
+const CHOOSE_ONE_PROMPT_IMAGE = "/assets/choose-one-prompt.png";
 const CARD_PACK_FRONT_IMAGE = "/assets/card-pack-front.png";
 const CARD_PACK_BACK_IMAGE = "/assets/card-pack-back.png";
 const SCANNER_LOTTIE = "/assets/scanner.lottie";
@@ -571,6 +572,7 @@ function PixelButton({
   textColor,
   pawColor,
   imageSrc,
+  imageTintColor,
   ariaLabel,
 }: {
   onClick?: () => void;
@@ -583,6 +585,7 @@ function PixelButton({
   textColor?: string;
   pawColor?: string;
   imageSrc?: string;
+  imageTintColor?: string;
   ariaLabel?: string;
 }) {
   const isSecondary = variant === "secondary";
@@ -613,6 +616,23 @@ function PixelButton({
           className="pointer-events-none absolute inset-0 h-full w-full object-fill"
           draggable={false}
         />
+        {imageTintColor && (
+          <span
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundColor: imageTintColor,
+              mixBlendMode: "multiply",
+              maskImage: `url("${imageSrc}")`,
+              maskPosition: "center",
+              maskRepeat: "no-repeat",
+              maskSize: "100% 100%",
+              WebkitMaskImage: `url("${imageSrc}")`,
+              WebkitMaskPosition: "center",
+              WebkitMaskRepeat: "no-repeat",
+              WebkitMaskSize: "100% 100%",
+            }}
+          />
+        )}
       </button>
     );
   }
@@ -1662,6 +1682,8 @@ function CardSkyScene({
   onSelect: (cardIndex: number) => void;
 }) {
   const [canSelect, setCanSelect] = useState(false);
+  const chooseTitleRef = useRef<HTMLParagraphElement>(null);
+  const [choosePromptWidth, setChoosePromptWidth] = useState<number | null>(null);
   const cards = [
     { delay: 0, x: "17.82%", y: "50%" },
     { delay: 1367, x: "50%", y: "50%" },
@@ -1675,63 +1697,104 @@ function CardSkyScene({
     return () => window.clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (!canSelect || !chooseTitleRef.current) return;
+
+    const title = chooseTitleRef.current;
+    const updatePromptWidth = () => {
+      setChoosePromptWidth(title.getBoundingClientRect().width + 24);
+    };
+    const observer = new ResizeObserver(updatePromptWidth);
+
+    updatePromptWidth();
+    observer.observe(title);
+    document.fonts?.ready.then(updatePromptWidth);
+
+    return () => observer.disconnect();
+  }, [canSelect]);
+
   return (
     <div
-      className="relative h-[464px] w-[330px] max-w-[92vw] translate-y-[24px] overflow-hidden"
+      className="flex h-[640px] w-[330px] max-w-[92vw] translate-y-[24px] flex-col items-center"
       aria-label={canSelect ? "카드 한 장을 선택하세요" : "카드가 하늘에 펼쳐지는 중"}
     >
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{ background: "radial-gradient(circle at 50% 52%, rgba(255,207,48,.22), transparent 62%)" }}
-      />
-      {cards.map((card, index) => (
-        <button
-          key={card.delay}
-          type="button"
-          disabled={!canSelect}
-          aria-label={`${index + 1}번 카드 선택`}
-          onClick={() => onSelect(index)}
-          className={`group absolute w-[27.83%] border-0 bg-transparent p-0 opacity-0 outline-none ${
-            canSelect ? "cursor-pointer" : "cursor-default"
-          }`}
-          style={{
-            "--sky-x": card.x,
-            "--sky-y": card.y,
-            animation: `cardSkyArrive 1200ms cubic-bezier(.22,.61,.36,1) ${card.delay}ms 1 both`,
-            zIndex: index + 1,
-          } as React.CSSProperties}
-        >
-          <div
-            className="w-full will-change-transform"
-            style={{
-              animation: `cardSkySpin 1200ms cubic-bezier(.22,.61,.36,1) ${card.delay}ms 1 both`,
-            }}
-          >
+      <div className="flex h-[118px] w-full flex-col items-center justify-start pt-[8px]">
+        {canSelect && (
+          <>
+            <p
+              ref={chooseTitleRef}
+              className="translate-y-[16px] text-center text-[22px] tracking-[2px]"
+              style={{
+                fontFamily: "Galmuri11",
+                fontWeight: 700,
+                color: "transparent",
+                WebkitTextStroke: "1px rgba(255,255,255,0.45)",
+                backgroundImage:
+                  "linear-gradient(90deg, rgba(242,235,221,0.42) 0%, #ffffff 42%, rgba(170,235,255,0.95) 50%, #ffffff 58%, rgba(242,235,221,0.42) 100%)",
+                backgroundClip: "text",
+                WebkitBackgroundClip: "text",
+                backgroundSize: "220% 100%",
+                animation: "textShimmer 1.7s linear infinite",
+                textShadow: "0 0 10px rgba(168,238,255,0.45)",
+              }}
+            >
+              Choose One!
+            </p>
             <img
-              src={cardBackImage}
-              alt=""
+              src={CHOOSE_ONE_PROMPT_IMAGE}
+              alt="하나를 선택해 보세요"
+              className="mt-[8px] h-auto max-w-full object-contain"
+              style={{
+                width: choosePromptWidth === null ? 0 : `${choosePromptWidth}px`,
+              }}
               draggable={false}
-              className={`block w-full select-none rounded-[8px] transition-[transform,filter] duration-200 ease-out ${
-                canSelect
-                  ? "group-hover:-translate-y-2 group-hover:scale-110 group-hover:brightness-110 group-hover:drop-shadow-[0_0_20px_rgba(255,220,80,.95)] group-focus-visible:-translate-y-2 group-focus-visible:scale-110 group-focus-visible:brightness-110 group-focus-visible:drop-shadow-[0_0_20px_rgba(255,220,80,.95)] group-active:scale-105"
-                  : ""
-              }`}
             />
-          </div>
-        </button>
-      ))}
-      {canSelect && (
-        <p
-          className="absolute inset-x-0 top-[4%] z-20 text-center text-[15px] tracking-[.5px] text-white"
-          style={{
-            fontFamily: "Elice DX Neolli",
-            fontWeight: 500,
-            textShadow: "0 0 8px rgba(255,215,80,.9)",
-          }}
-        >
-          원하는 카드를 선택해주세요
-        </p>
-      )}
+          </>
+        )}
+      </div>
+
+      <div className="relative h-[464px] w-full overflow-hidden">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: "radial-gradient(circle at 50% 52%, rgba(255,207,48,.22), transparent 62%)" }}
+        />
+        {cards.map((card, index) => (
+          <button
+            key={card.delay}
+            type="button"
+            disabled={!canSelect}
+            aria-label={`${index + 1}번 카드 선택`}
+            onClick={() => onSelect(index)}
+            className={`group absolute w-[27.83%] border-0 bg-transparent p-0 opacity-0 outline-none ${
+              canSelect ? "cursor-pointer" : "cursor-default"
+            }`}
+            style={{
+              "--sky-x": card.x,
+              "--sky-y": card.y,
+              animation: `cardSkyArrive 1200ms cubic-bezier(.22,.61,.36,1) ${card.delay}ms 1 both`,
+              zIndex: index + 1,
+            } as React.CSSProperties}
+          >
+            <div
+              className="w-full will-change-transform"
+              style={{
+                animation: `cardSkySpin 1200ms cubic-bezier(.22,.61,.36,1) ${card.delay}ms 1 both`,
+              }}
+            >
+              <img
+                src={cardBackImage}
+                alt=""
+                draggable={false}
+                className={`block w-full select-none rounded-[8px] transition-[transform,filter] duration-200 ease-out ${
+                  canSelect
+                    ? "group-hover:-translate-y-2 group-hover:scale-110 group-hover:brightness-110 group-hover:drop-shadow-[0_0_20px_rgba(255,220,80,.95)] group-focus-visible:-translate-y-2 group-focus-visible:scale-110 group-focus-visible:brightness-110 group-focus-visible:drop-shadow-[0_0_20px_rgba(255,220,80,.95)] group-active:scale-105"
+                    : ""
+                }`}
+              />
+            </div>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -2270,6 +2333,7 @@ function ClassicV2Version() {
     return (
       <CompletePage
         cardImage={generatedAssets?.cardImage ?? null}
+        cardBackImage={generatedAssets?.cardBackImage ?? null}
         onCreateNew={handleReset}
         shareUrl={createCtaShareLink(generatedAssets?.characterizationId)}
       />
@@ -2441,7 +2505,7 @@ function ClassicV2Version() {
                       이미지 파일을 선택하세요
                     </span>
                     <span className="text-[9px] leading-none tracking-[0.25px] text-[#c6b99f]">
-                      JPG, PNG, HEIC 파일 지원
+                      JPG, PNG, WEBP 파일 지원
                     </span>
                   </span>
                 )}
@@ -3308,16 +3372,18 @@ function CTAPage({
             </div>
 
             <div className="flex flex-col items-center gap-[7.09px]">
-              <PixelButton
-                onClick={() => {
-                  setShowDialog(true);
-                }}
-                showPaw
-                imageSrc={imgBtnOpenAlertLg}
-                ariaLabel="오픈 알림 받기"
-              >
-                오픈 알림 받기
-              </PixelButton>
+              {!isSharedEntry && (
+                <PixelButton
+                  onClick={() => {
+                    setShowDialog(true);
+                  }}
+                  showPaw
+                  imageSrc={imgBtnOpenAlertLg}
+                  ariaLabel="오픈 알림 받기"
+                >
+                  오픈 알림 받기
+                </PixelButton>
+              )}
 
               <PixelButton
                 onClick={
@@ -3328,9 +3394,10 @@ function CTAPage({
                       }
                     : handleShare
                 }
-                variant="secondary"
+                variant={isSharedEntry ? "primary" : "secondary"}
                 showPaw
                 imageSrc={isSharedEntry ? imgBtnCaptureTooLg : imgBtnBragLg}
+                imageTintColor={isSharedEntry ? "#f9cd50" : undefined}
                 ariaLabel={isSharedEntry ? "나도 포착하기" : "친구에게 자랑하기"}
               >
                 {isSharedEntry ? "나도 포착하기" : "친구에게 자랑하기"}
@@ -3415,10 +3482,12 @@ function CTAPage({
 
 function CompletePage({
   cardImage,
+  cardBackImage,
   onCreateNew,
   shareUrl,
 }: {
   cardImage: string | null;
+  cardBackImage: string | null;
   onCreateNew: () => void;
   shareUrl: string;
 }) {
@@ -3466,22 +3535,34 @@ function CompletePage({
               앱이 오픈되면 문자로 알려드릴게요
             </p>
 
-            <div
-              className="relative mt-[34px] h-[206px] w-[206px] rotate-[-6deg] rounded-[8px] border border-[#8d8a7d] bg-[#fbfaf3] p-[10px]"
-              style={{
-                boxShadow:
-                  "0 14px 24px rgba(65, 52, 35, 0.18), 0 2px 0 rgba(255,255,255,0.8) inset",
-              }}
-            >
-              <div className="absolute left-1/2 top-[-11px] h-[22px] w-[68px] -translate-x-1/2 rotate-[2deg] bg-[#ecdca2]/80" />
-              <div className="relative h-full w-full overflow-hidden rounded-[4px] border border-[#d2d0c1] bg-[#eef4e4]">
-                <img
-                  src={cardImage || imgCharFront}
-                  alt=""
-                  className="absolute inset-0 h-full w-full object-cover"
-                  draggable={false}
-                />
-              </div>
+            <div className="relative mt-[34px] h-[220px] w-[204px]">
+              {cardImage ? (
+                <>
+                  <div className="absolute right-[10px] top-[6px] h-[206.02px] w-[143.05px] rotate-[9deg] overflow-hidden rounded-[7px]">
+                    <img
+                      src={cardBackImage || imgCardBack}
+                      alt="카드 뒷면"
+                      className="absolute left-1/2 top-1/2 h-[211px] w-[147px] max-w-none -translate-x-1/2 -translate-y-1/2 object-fill"
+                      draggable={false}
+                    />
+                  </div>
+                  <img
+                    src={cardImage}
+                    alt="카드 앞면"
+                    className="absolute left-[13px] top-0 h-[206.02px] w-[143.05px] rotate-[-2deg] object-contain drop-shadow-[0_10px_14px_rgba(65,52,35,0.22)]"
+                    draggable={false}
+                  />
+                </>
+              ) : (
+                <div role="status" aria-label="카드 이미지를 불러오는 중">
+                  <div className="absolute right-[10px] top-[6px] h-[206.02px] w-[143.05px] rotate-[9deg] animate-pulse rounded-[7px] border border-[#d8ccb5] bg-[#e7ddca]" />
+                  <div className="absolute left-[13px] top-0 flex h-[206.02px] w-[143.05px] rotate-[-2deg] animate-pulse flex-col items-center justify-center gap-3 rounded-[7px] border border-[#d8ccb5] bg-[#f0e8d9] shadow-[0_10px_14px_rgba(65,52,35,0.14)]">
+                    <div className="h-[86px] w-[86px] rounded-[6px] bg-[#ddd1bc]" />
+                    <div className="h-[10px] w-[92px] rounded-full bg-[#ddd1bc]" />
+                    <div className="h-[8px] w-[64px] rounded-full bg-[#e3d8c5]" />
+                  </div>
+                </div>
+              )}
             </div>
 
             <img
