@@ -4,6 +4,7 @@
   useEffect,
   useCallback,
 } from "react";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { XIcon } from "lucide-react";
 import { trackEvent } from "../analytics";
 import imgBtnSmall from "../assets/ui/btn-sm.png";
@@ -150,6 +151,7 @@ const CARD_PACK_OPEN_PROMPT_IMAGE = "/assets/card-pack-open-prompt.png";
 const CARD_PACK_CUT_PROMPT_IMAGE = "/assets/card-pack-cut-prompt.png";
 const CARD_PACK_FRONT_IMAGE = "/assets/card-pack-front.png";
 const CARD_PACK_BACK_IMAGE = "/assets/card-pack-back.png";
+const SCANNER_LOTTIE = "/assets/scanner.lottie";
 const CARD_SELECT_FRONT_DELAYS = [
   0, 500, 1000, 1500, 1998.798, 2500, 2998.798, 3497.596, 3998.798,
   4497.596, 4996.394, 5493.988, 5996.394, 6750, 7500, 8250,
@@ -171,8 +173,6 @@ const KEYFRAMES = `
   @keyframes dogBreath  { 0%,100%{opacity:1}                50%{opacity:0.12} }
   @keyframes softPulse  { 0%,100%{transform:scale(1)}        50%{transform:scale(1.05)} }
   @keyframes textShimmer { 0%{background-position:220% 0} 100%{background-position:-120% 0} }
-  @keyframes figmaScanY  { 0%{transform:translateY(122px)} 50%{transform:translateY(-122px)} 100%{transform:translateY(122px)} }
-  @keyframes scanGlow   { 0%,100%{opacity:.72} 50%{opacity:1} }
   @keyframes circularLoader { to{transform:rotate(360deg)} }
   @keyframes cardFrontSweep {
     0%{opacity:.8;transform:translate3d(-277px,-27px,0) rotate(5deg) scale(.6,.8)}
@@ -1099,6 +1099,14 @@ function ProcessingPanel({
 }) {
   const [loadingStage, setLoadingStage] = useState<"scan" | "card">("scan");
 
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => setLoadingStage("card"),
+      SCAN_STAGE_DURATION_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, []);
+
   return (
     <div
       className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-6"
@@ -1159,27 +1167,14 @@ function ProcessingPanel({
                 )}
               </div>
               <div
-                className="pointer-events-none absolute inset-0 z-10 overflow-visible rounded-[8px]"
+                className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-[248px] w-[248px] -translate-x-1/2 -translate-y-1/2"
                 aria-label="변환 중 스캔 애니메이션"
-                onAnimationEnd={() => setLoadingStage("card")}
-                style={{
-                  animation:
-                    "figmaScanY 4s cubic-bezier(0.293,-0.245,0.652,1.123) 2",
-                }}
               >
-                <div
-                  className="absolute left-1/2 top-1/2 h-[72px] w-[288px] -translate-x-1/2 rounded-[12px] bg-[#5f8f35]/45 blur-[10px]"
-                  style={{
-                    transform: "translate(-50%, 4px)",
-                  }}
-                />
-                <div
-                  className="absolute left-1/2 top-1/2 h-[10px] w-[288px] -translate-x-1/2 rounded-full bg-[#8fcd54]"
-                  style={{
-                    boxShadow:
-                      "0 0 12px rgba(143,205,84,0.95), 0 0 24px rgba(143,205,84,0.65)",
-                    animation: "scanGlow 1s ease-in-out infinite",
-                  }}
+                <DotLottieReact
+                  src={SCANNER_LOTTIE}
+                  loop
+                  autoplay
+                  className="block h-full w-full"
                 />
               </div>
               <div className="pointer-events-none absolute inset-0 z-20 rounded-[8px] ring-1 ring-white/45" />
