@@ -91,6 +91,14 @@ type GeneratedCardAssets = {
   characterizationId?: string;
 };
 
+type CharacterizationResponse = {
+  characterizationId: string;
+  status: string;
+  cardType: string;
+  resultImageUrl: string;
+  failureReason: string | null;
+};
+
 function formatApiErrorPayload(payload: unknown) {
   if (!payload || typeof payload !== "object") {
     return String(payload ?? "");
@@ -133,8 +141,15 @@ function getApiErrorMessage(payload: unknown) {
 
 const FALLBACK_CARD_ASSETS: GeneratedCardAssets = {
   cardImage: imgCharFront,
-  cardBackImage: imgCardBack,
+  cardBackImage: "/assets/card-back-ground.png",
 };
+const CARD_BACK_IMAGES_BY_TYPE: Record<string, string> = {
+  GROUND: "/assets/card-back-ground.png",
+  SKY: "/assets/card-back-sky.png",
+  SPACE: "/assets/card-back-space.png",
+  SEA: "/assets/card-back-sea.png",
+};
+const CHARACTERIZATION_POLL_INTERVAL_MS = 2000;
 
 const ONBOARDING_SLIDES = [
   "/assets/carousel1.png",
@@ -153,7 +168,6 @@ const CARD_GENERATION_FINISHING_PROMPT_IMAGE =
   "/assets/card-generation-finishing-prompt.png";
 const CHOOSE_ONE_PROMPT_IMAGE = "/assets/choose-one-prompt.png";
 const CARD_PACK_FRONT_IMAGE = "/assets/card-pack-front.png";
-const CARD_PACK_BACK_IMAGE = "/assets/card-pack-back.png";
 const SCANNER_LOTTIE = "/assets/scanner.lottie";
 const CARD_SELECT_FRONT_DELAYS = [
   0, 500, 1000, 1500, 1998.798, 2500, 2998.798, 3497.596, 3998.798,
@@ -362,6 +376,52 @@ function getGeneratedCardAssets(payload: unknown): GeneratedCardAssets {
       ? { characterizationId }
       : {}),
   };
+}
+
+function getCharacterizationResponse(payload: unknown): CharacterizationResponse {
+  const record =
+    payload && typeof payload === "object"
+      ? (payload as Record<string, unknown>)
+      : {};
+  const data =
+    record.data && typeof record.data === "object"
+      ? (record.data as Record<string, unknown>)
+      : {};
+  const rawId = data.characterizationId ?? data.characterization_id;
+
+  return {
+    characterizationId:
+      typeof rawId === "number"
+        ? String(rawId)
+        : typeof rawId === "string"
+          ? rawId
+          : "",
+    status: typeof data.status === "string" ? data.status.toUpperCase() : "",
+    cardType:
+      typeof data.cardType === "string" ? data.cardType.toUpperCase() : "",
+    resultImageUrl:
+      typeof data.resultImageUrl === "string" ? data.resultImageUrl : "",
+    failureReason:
+      typeof data.failureReason === "string" ? data.failureReason : null,
+  };
+}
+
+function getCardBackImage(cardType: string) {
+  return CARD_BACK_IMAGES_BY_TYPE[cardType] ?? FALLBACK_CARD_ASSETS.cardBackImage;
+}
+
+function waitForPollInterval(signal: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    const handleAbort = () => {
+      window.clearTimeout(timer);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    const timer = window.setTimeout(() => {
+      signal.removeEventListener("abort", handleAbort);
+      resolve();
+    }, CHARACTERIZATION_POLL_INTERVAL_MS);
+    signal.addEventListener("abort", handleAbort, { once: true });
+  });
 }
 
 function getCardDownloadName(characterName: string) {
@@ -1113,8 +1173,10 @@ function OnboardingCarousel({
 // ── ProcessingPanel — loading overlay ────────────────────────
 function ProcessingPanel({
   uploadedImage,
+  cardBackImage,
 }: {
   uploadedImage: string | null;
+  cardBackImage: string;
 }) {
   const [loadingStage, setLoadingStage] = useState<"scan" | "card">("scan");
 
@@ -1203,7 +1265,7 @@ function ProcessingPanel({
               {CARD_SELECT_BACK_DELAYS.map((delay, index) => (
                 <img
                   key={`card-back-${delay}`}
-                  src={CARD_PACK_BACK_IMAGE}
+                  src={cardBackImage}
                   alt=""
                   className="pointer-events-none absolute left-1/2 top-[91px] z-0 h-[157px] w-[117px] object-contain"
                   draggable={false}
@@ -1332,19 +1394,11 @@ function PixelGeneratingModal() {
 
 // ── CardPackPanel — tap to open ───────────────────────────────
 function CardPackPanel({
-  isReady,
   onOpen,
 }: {
-  isReady: boolean;
   onOpen: () => void;
 }) {
-  const [stage, setStage] = useState<"ready" | "cut" | "waiting">("ready");
-
-  useEffect(() => {
-    if (stage === "waiting" && isReady) {
-      onOpen();
-    }
-  }, [isReady, onOpen, stage]);
+  const [stage, setStage] = useState<"ready" | "cut">("ready");
 
   return (
     <div
@@ -1384,18 +1438,11 @@ function CardPackPanel({
               className="mt-[8px] h-auto w-[270px] max-w-full object-contain"
               draggable={false}
             />
-          ) : stage === "cut" ? (
+          ) : (
             <img
               src={CARD_PACK_CUT_PROMPT_IMAGE}
               alt="절취선을 잘라보세요"
               className="mt-[8px] h-auto w-[180px] max-w-full object-contain"
-              draggable={false}
-            />
-          ) : (
-            <img
-              src={CARD_GENERATION_FINISHING_PROMPT_IMAGE}
-              alt="카드 생성을 마무리하고 있어요"
-              className="mt-[8px] h-auto w-[300px] max-w-full object-contain"
               draggable={false}
             />
           )}
@@ -1413,33 +1460,8 @@ function CardPackPanel({
             >
               <ReadyCardPack />
             </button>
-          ) : stage === "cut" ? (
-            <CuttableCardPack
-              onCut={() => {
-                if (isReady) {
-                  onOpen();
-                  return;
-                }
-                trackEvent("card_pack_waiting_for_response");
-                setStage("waiting");
-              }}
-            />
           ) : (
-            <div
-              className="flex h-[280px] w-[208px] items-center justify-center"
-              role="status"
-              aria-label="카드 생성 응답 대기 중"
-            >
-              <span
-                className="block h-[58px] w-[58px] rounded-full border-[6px] border-white/20 border-t-[#9fe1ff]"
-                style={{
-                  animation: "circularLoader 800ms linear infinite",
-                  boxShadow:
-                    "0 0 14px rgba(159,225,255,.55), inset 0 0 10px rgba(159,225,255,.18)",
-                }}
-                aria-hidden="true"
-              />
-            </div>
+            <CuttableCardPack onCut={onOpen} />
           )}
         </div>
       </div>
@@ -1544,18 +1566,25 @@ function CuttableCardPack({ onCut }: { onCut: () => void }) {
 
 // ── PackOpeningOverlay ────────────────────────────────────────
 // Figma motion 6570:396 — plays once after the user finishes slicing.
-function PackOpeningOverlay({ characterName, assets, onResult, onRegister }: {
+function PackOpeningOverlay({ characterName, assets, isReady, onResult, onRegister }: {
   characterName: string;
   assets: GeneratedCardAssets;
+  isReady: boolean;
   onResult: () => void;
   onRegister?: () => void;
 }) {
-  const [openingScene, setOpeningScene] = useState<"pack" | "sky" | "result">("pack");
+  const [openingScene, setOpeningScene] = useState<"pack" | "sky" | "waiting" | "result">("pack");
 
   useEffect(() => {
     const skyTimer = window.setTimeout(() => setOpeningScene("sky"), 8000);
     return () => window.clearTimeout(skyTimer);
   }, []);
+
+  useEffect(() => {
+    if (openingScene !== "waiting" || !isReady) return;
+    setOpeningScene("result");
+    onResult();
+  }, [isReady, onResult, openingScene]);
 
   const particles = Array.from({ length: 36 }, (_, index) => {
     const angle = (index / 36) * Math.PI * 2;
@@ -1662,10 +1691,39 @@ function PackOpeningOverlay({ characterName, assets, onResult, onRegister }: {
           cardBackImage={assets.cardBackImage}
           onSelect={(cardIndex) => {
             trackEvent("card_sky_selected", { card_index: cardIndex + 1 });
-            setOpeningScene("result");
-            onResult();
+            if (isReady) {
+              setOpeningScene("result");
+              onResult();
+              return;
+            }
+            trackEvent("card_pack_waiting_for_response");
+            setOpeningScene("waiting");
           }}
         />
+      ) : openingScene === "waiting" ? (
+        <div
+          className="flex h-[560px] w-[330px] translate-y-[24px] flex-col items-center"
+          role="status"
+          aria-label="카드 생성 응답 대기 중"
+        >
+          <img
+            src={CARD_GENERATION_FINISHING_PROMPT_IMAGE}
+            alt="카드 생성을 마무리하고 있어요"
+            className="mt-[34px] h-auto w-[300px] max-w-full object-contain"
+            draggable={false}
+          />
+          <div className="flex flex-1 items-center justify-center pb-[70px]">
+            <span
+              className="block h-[58px] w-[58px] rounded-full border-[6px] border-white/20 border-t-[#9fe1ff]"
+              style={{
+                animation: "circularLoader 800ms linear infinite",
+                boxShadow:
+                  "0 0 14px rgba(159,225,255,.55), inset 0 0 10px rgba(159,225,255,.18)",
+              }}
+              aria-hidden="true"
+            />
+          </div>
+        </div>
       ) : (
         <ResultOverlay characterName={characterName} assets={assets} onRegister={onRegister} />
       )}
@@ -2049,11 +2107,16 @@ function ClassicV2Version() {
   >(isSharedCta ? "cta" : null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isNameComposingRef = useRef(false);
+  const conversionAbortRef = useRef<AbortController | null>(null);
   const isButtonActive =
     !!uploadedImage && characterName.trim().length > 0;
   const isPreviewMode = searchParams.get("preview") === "1";
   const isTransformationOverlayOpen =
     registrationView === null && phase !== "idle";
+
+  useEffect(() => {
+    return () => conversionAbortRef.current?.abort();
+  }, []);
 
   useEffect(() => {
     if (!isTransformationOverlayOpen) return;
@@ -2193,6 +2256,9 @@ function ClassicV2Version() {
 
   const handleConvert = useCallback(async () => {
     if (!isButtonActive) return;
+    conversionAbortRef.current?.abort();
+    const controller = new AbortController();
+    conversionAbortRef.current = controller;
     trackEvent("convert_started", {
       name_length: characterName.trim().length,
       is_preview: isPreviewMode,
@@ -2223,6 +2289,7 @@ function ClassicV2Version() {
           image: uploadedImage,
           name: characterName.trim(),
         }),
+        signal: controller.signal,
       });
       const responseText = await response.text();
       let payload: unknown = {};
@@ -2234,22 +2301,63 @@ function ClassicV2Version() {
         }
       }
       if (!response.ok) {
-        const apiErrorMessage = getApiErrorMessage(payload);
-        trackEvent("convert_failed", {
-          message: apiErrorMessage,
-        });
-        setGenerationError(apiErrorMessage);
-        setShowGenerationErrorModal(true);
-        setConversionStatus("error");
-        setPhase("idle");
-        return;
+        throw new Error(getApiErrorMessage(payload));
       }
-      setGeneratedAssets(getGeneratedCardAssets(payload));
-      setConversionStatus("success");
-      trackEvent("convert_completed", {
-        mode: "api",
+
+      let characterization = getCharacterizationResponse(payload);
+      if (!characterization.characterizationId) {
+        throw new Error("카드 생성 응답에 characterizationId가 없어요.");
+      }
+
+      const cardBackImage = getCardBackImage(characterization.cardType);
+      setGeneratedAssets({
+        cardImage: FALLBACK_CARD_ASSETS.cardImage,
+        cardBackImage,
+        characterizationId: characterization.characterizationId,
       });
+
+      while (!controller.signal.aborted) {
+        if (characterization.status === "SUCCEEDED") {
+          if (!characterization.resultImageUrl) {
+            throw new Error("완료 응답에 resultImageUrl이 없어요.");
+          }
+          setGeneratedAssets({
+            cardImage: characterization.resultImageUrl,
+            cardBackImage,
+            characterizationId: characterization.characterizationId,
+          });
+          setConversionStatus("success");
+          trackEvent("convert_completed", { mode: "api" });
+          return;
+        }
+
+        if (["FAILED", "FAILURE", "CANCELED", "CANCELLED"].includes(characterization.status)) {
+          throw new Error(
+            characterization.failureReason || "카드 이미지 변환에 실패했어요.",
+          );
+        }
+
+        await waitForPollInterval(controller.signal);
+        const pollResponse = await fetch(
+          `/api/characterizations/public/${encodeURIComponent(characterization.characterizationId)}`,
+          {
+            method: "GET",
+            credentials: "include",
+            signal: controller.signal,
+          },
+        );
+        const pollPayload = await pollResponse.json();
+        if (!pollResponse.ok) {
+          throw new Error(getApiErrorMessage(pollPayload));
+        }
+        characterization = {
+          ...characterization,
+          ...getCharacterizationResponse(pollPayload),
+          characterizationId: characterization.characterizationId,
+        };
+      }
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
       trackEvent("convert_failed", {
         message:
           error instanceof Error ? error.message : "unknown_error",
@@ -2266,16 +2374,17 @@ function ClassicV2Version() {
   }, [characterName, isButtonActive, isPreviewMode, uploadedImage]);
 
   const handleOpenPack = useCallback(() => {
-    if (conversionStatus !== "success") return;
     trackEvent("card_pack_opened");
     setPhase("dim");
-  }, [conversionStatus]);
+  }, []);
   const handleResult = useCallback(() => {
     trackEvent("result_viewed");
     setPhase("result");
   }, []);
 
   const handleReset = useCallback(() => {
+    conversionAbortRef.current?.abort();
+    conversionAbortRef.current = null;
     window.history.replaceState(
       null,
       "",
@@ -2600,14 +2709,16 @@ function ClassicV2Version() {
         )}
 
         {phase === "processing" && (
-          <ProcessingPanel uploadedImage={uploadedImage} />
+          <ProcessingPanel
+            uploadedImage={uploadedImage}
+            cardBackImage={
+              generatedAssets?.cardBackImage ?? FALLBACK_CARD_ASSETS.cardBackImage
+            }
+          />
         )}
 
         {phase === "pack" && (
-          <CardPackPanel
-            isReady={conversionStatus === "success"}
-            onOpen={handleOpenPack}
-          />
+          <CardPackPanel onOpen={handleOpenPack} />
         )}
       </main>
 
@@ -2646,6 +2757,7 @@ function ClassicV2Version() {
           <PackOpeningOverlay
             characterName={characterName}
             assets={generatedAssets ?? FALLBACK_CARD_ASSETS}
+            isReady={conversionStatus === "success"}
             onResult={handleResult}
             onRegister={() => setRegistrationView("cta")}
           />

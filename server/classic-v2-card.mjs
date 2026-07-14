@@ -226,25 +226,33 @@ function normalizeCardAssets(payload) {
       record.cardBack ||
       data.cardBackImageUrl,
   );
-
-  if (!resultImageUrl || !cardBackImageUrl) {
-    throw httpError(
-      502,
-      "카드 이미지 서버 응답에 resultImageUrl, cardBackImageUrl이 모두 필요해요.",
-    );
-  }
+  const status = normalizeStatus(data.status || record.status);
+  const cardType = normalizeStatus(data.cardType || record.cardType);
+  const failureReason =
+    typeof data.failureReason === "string"
+      ? data.failureReason
+      : typeof record.failureReason === "string"
+        ? record.failureReason
+        : null;
 
   return {
     data: {
-      characterization_id: characterizationId,
-      resultImageUrl,
-      cardBackImageUrl,
+      characterizationId,
+      status,
+      cardType,
+      ...(resultImageUrl ? { resultImageUrl } : {}),
+      ...(cardBackImageUrl ? { cardBackImageUrl } : {}),
+      failureReason,
     },
     datetime:
       typeof record.datetime === "string"
         ? record.datetime
         : new Date().toISOString(),
   };
+}
+
+function normalizeStatus(value) {
+  return typeof value === "string" ? value.trim().toUpperCase() : "";
 }
 
 function normalizeId(value) {
