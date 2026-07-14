@@ -1573,11 +1573,11 @@ function CuttableCardPack({ onCut }: { onCut: () => void }) {
 
 // ── PackOpeningOverlay ────────────────────────────────────────
 // Figma motion 6570:396 — plays once after the user finishes slicing.
-function PackOpeningOverlay({ characterName, assets, isReady, onWaitForResult, onResult, onRegister }: {
+function PackOpeningOverlay({ characterName, assets, isReady, onStartPolling, onResult, onRegister }: {
   characterName: string;
   assets: GeneratedCardAssets;
   isReady: boolean;
-  onWaitForResult: () => void;
+  onStartPolling: () => void;
   onResult: () => void;
   onRegister?: () => void;
 }) {
@@ -1593,6 +1593,11 @@ function PackOpeningOverlay({ characterName, assets, isReady, onWaitForResult, o
     setOpeningScene("result");
     onResult();
   }, [isReady, onResult, openingScene]);
+
+  useEffect(() => {
+    if (openingScene !== "sky" || isReady) return;
+    onStartPolling();
+  }, [isReady, onStartPolling, openingScene]);
 
   const particles = Array.from({ length: 36 }, (_, index) => {
     const angle = (index / 36) * Math.PI * 2;
@@ -1705,7 +1710,6 @@ function PackOpeningOverlay({ characterName, assets, isReady, onWaitForResult, o
               return;
             }
             trackEvent("card_pack_waiting_for_response");
-            onWaitForResult();
             setOpeningScene("waiting");
           }}
         />
@@ -2809,7 +2813,7 @@ function ClassicV2Version() {
             characterName={characterName}
             assets={generatedAssets ?? FALLBACK_CARD_ASSETS}
             isReady={conversionStatus === "success"}
-            onWaitForResult={startCharacterizationPolling}
+            onStartPolling={startCharacterizationPolling}
             onResult={handleResult}
             onRegister={() => setRegistrationView("cta")}
           />
