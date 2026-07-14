@@ -1230,8 +1230,6 @@ function ProcessingPanel({
   }, []);
 
   useLayoutEffect(() => {
-    if (loadingStage !== "card") return;
-
     const updateSelectingImageTop = () => {
       const promptRect = processingPromptRef.current?.getBoundingClientRect();
       const fieldRect = processingFieldRef.current?.getBoundingClientRect();
@@ -1255,7 +1253,7 @@ function ProcessingPanel({
       observer.disconnect();
       window.removeEventListener("resize", updateSelectingImageTop);
     };
-  }, [loadingStage]);
+  }, []);
 
   return (
     <div
@@ -1299,7 +1297,7 @@ function ProcessingPanel({
                 ? "사진 속 동물을 분석하고 있어요"
                 : "적합한 카드팩을 선정하고 있어요"
             }
-            className="mt-[8px] h-auto w-[270px] max-w-full object-contain"
+            className="mt-[8px] h-[71px] w-[270px] max-w-full object-contain"
             draggable={false}
           />
         </div>
@@ -1309,7 +1307,10 @@ function ProcessingPanel({
           className="relative flex h-[360px] w-[min(100vw,397px)] max-w-none items-center justify-center overflow-hidden"
         >
           {loadingStage === "scan" ? (
-            <div className="relative h-[220px] w-[220px] overflow-visible">
+            <div
+              className="absolute left-1/2 h-[206px] w-[206px] -translate-x-1/2 overflow-visible"
+              style={{ top: `${selectingImageTop}px` }}
+            >
               <div className="absolute inset-0 z-0 overflow-hidden rounded-[8px]">
                 {uploadedImage && (
                   <img
@@ -2828,11 +2829,9 @@ function ClassicV2Version() {
                 }}
                 maxLength={6}
                 placeholder="이름을 작성해주세요"
-                className="mt-[22px] h-[56px] w-[250px] rounded-[12px] bg-white px-4 text-[15px] tracking-[0.4px] text-[#32322d] placeholder:text-[14px] placeholder:tracking-[0.2px] placeholder:text-[#c9c2b4] focus:outline-none focus:ring-2 focus:ring-[#628d38]"
+                className="character-name-input mt-[22px] h-[56px] w-[250px] rounded-[12px] bg-white px-4 text-[15px] tracking-[0.4px] text-[#32322d] placeholder:text-[14px] placeholder:leading-[1.3] placeholder:tracking-[0.2px] placeholder:text-[#c9c2b4] focus:outline-none focus:ring-2 focus:ring-[#628d38]"
                 style={{
-                  fontFamily:
-                    '"Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif',
-                  fontWeight: 400,
+                  fontWeight: 300,
                   border: "1px solid #e5dece",
                   boxShadow: "0 2px 6px rgba(104,85,62,0.06)",
                 }}
