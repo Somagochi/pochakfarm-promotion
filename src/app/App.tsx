@@ -40,6 +40,9 @@ import imgModalWindowBottom from "../assets/ui/modal-window-bottom.png";
 import imgModalWindowMiddle from "../assets/ui/modal-window-middle.png";
 import imgModalWindowTop from "../assets/ui/modal-window-top.png";
 import imgCutScissors from "../assets/ui/cut-scissors.png";
+import imgRequiredPrivacyConsent from "../assets/ui/required-privacy-consent.png";
+import imgPrivacyRetentionNotice from "../assets/ui/privacy-retention-notice.png";
+import imgRegistrationModalHeading from "../assets/ui/registration-modal-heading.png";
 
 // ── Assets ───────────────────────────────────────────────────
 // Window frame & background
@@ -165,6 +168,8 @@ const PROCESSING_ANALYZING_PROMPT_IMAGE =
   "/assets/processing-analyzing-prompt.png";
 const PROCESSING_SELECTING_PROMPT_IMAGE =
   "/assets/processing-selecting-prompt.png";
+const PROCESSING_SELECTING_TEXT_BOTTOM_RATIO = 149 / 250;
+const PROCESSING_SELECTING_IMAGE_GAP = 90.98;
 const CARD_PACK_OPEN_PROMPT_IMAGE = "/assets/card-pack-open-prompt.png";
 const CARD_PACK_CUT_PROMPT_IMAGE = "/assets/card-pack-cut-prompt.png";
 const CARD_GENERATION_FINISHING_PROMPT_IMAGE =
@@ -1057,6 +1062,9 @@ function OnboardingCarousel({
   const scrollRafRef = useRef<number>();
   const autoPlayTimerRef = useRef<number>();
   const programmaticSlideRef = useRef<number | null>(null);
+  const carouselDraggingRef = useRef(false);
+  const carouselDragStartXRef = useRef(0);
+  const carouselDragStartScrollRef = useRef(0);
 
   const restartAutoPlay = useCallback(() => {
     if (autoPlayTimerRef.current) {
@@ -1082,7 +1090,7 @@ function OnboardingCarousel({
 
   useEffect(() => {
     const scroller = scrollerRef.current;
-    if (!scroller) return;
+    if (!scroller || carouselDraggingRef.current) return;
 
     programmaticSlideRef.current = activeSlide;
     scroller.scrollTo({
@@ -1133,11 +1141,32 @@ function OnboardingCarousel({
       <div
         ref={scrollerRef}
         onScroll={handleScroll}
-        onPointerDown={() => {
+        onPointerDown={(event) => {
           programmaticSlideRef.current = null;
           restartAutoPlay();
+          if (event.pointerType !== "mouse" || event.button !== 0) return;
+
+          carouselDraggingRef.current = true;
+          carouselDragStartXRef.current = event.clientX;
+          carouselDragStartScrollRef.current = event.currentTarget.scrollLeft;
+          event.currentTarget.setPointerCapture(event.pointerId);
         }}
-        className={`${className} mx-auto flex h-[291px] w-[300px] snap-x snap-mandatory overflow-x-auto scroll-smooth`}
+        onPointerMove={(event) => {
+          if (!carouselDraggingRef.current) return;
+          event.preventDefault();
+          event.currentTarget.scrollLeft =
+            carouselDragStartScrollRef.current -
+            (event.clientX - carouselDragStartXRef.current);
+        }}
+        onPointerUp={(event) => {
+          if (!carouselDraggingRef.current) return;
+          carouselDraggingRef.current = false;
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }}
+        onPointerCancel={() => {
+          carouselDraggingRef.current = false;
+        }}
+        className={`${className} mx-auto flex h-[291px] w-[300px] cursor-grab snap-x snap-mandatory overflow-x-auto scroll-smooth active:cursor-grabbing`}
         style={{
           scrollbarWidth: "none",
           WebkitOverflowScrolling: "touch",
@@ -1188,6 +1217,9 @@ function ProcessingPanel({
   uploadedImage: string | null;
 }) {
   const [loadingStage, setLoadingStage] = useState<"scan" | "card">("scan");
+  const processingPromptRef = useRef<HTMLImageElement>(null);
+  const processingFieldRef = useRef<HTMLDivElement>(null);
+  const [selectingImageTop, setSelectingImageTop] = useState(26);
 
   useEffect(() => {
     const timer = window.setTimeout(
@@ -1196,6 +1228,34 @@ function ProcessingPanel({
     );
     return () => window.clearTimeout(timer);
   }, []);
+
+  useLayoutEffect(() => {
+    if (loadingStage !== "card") return;
+
+    const updateSelectingImageTop = () => {
+      const promptRect = processingPromptRef.current?.getBoundingClientRect();
+      const fieldRect = processingFieldRef.current?.getBoundingClientRect();
+      if (!promptRect || !fieldRect) return;
+
+      const textBottom =
+        promptRect.top +
+        promptRect.height * PROCESSING_SELECTING_TEXT_BOTTOM_RATIO;
+      setSelectingImageTop(
+        textBottom + PROCESSING_SELECTING_IMAGE_GAP - fieldRect.top,
+      );
+    };
+    const observer = new ResizeObserver(updateSelectingImageTop);
+
+    if (processingPromptRef.current) observer.observe(processingPromptRef.current);
+    if (processingFieldRef.current) observer.observe(processingFieldRef.current);
+    window.addEventListener("resize", updateSelectingImageTop);
+    window.requestAnimationFrame(updateSelectingImageTop);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateSelectingImageTop);
+    };
+  }, [loadingStage]);
 
   return (
     <div
@@ -1228,6 +1288,7 @@ function ProcessingPanel({
             {loadingStage === "scan" ? "ANALYZING..." : "Select..."}
           </p>
           <img
+            ref={processingPromptRef}
             src={
               loadingStage === "scan"
                 ? PROCESSING_ANALYZING_PROMPT_IMAGE
@@ -1243,7 +1304,10 @@ function ProcessingPanel({
           />
         </div>
 
-        <div className="relative flex h-[360px] w-[min(100vw,397px)] max-w-none items-center justify-center overflow-hidden">
+        <div
+          ref={processingFieldRef}
+          className="relative flex h-[360px] w-[min(100vw,397px)] max-w-none items-center justify-center overflow-hidden"
+        >
           {loadingStage === "scan" ? (
             <div className="relative h-[220px] w-[220px] overflow-visible">
               <div className="absolute inset-0 z-0 overflow-hidden rounded-[8px]">
@@ -1290,7 +1354,8 @@ function ProcessingPanel({
                 <img
                   src={uploadedImage}
                   alt=""
-                  className="absolute left-1/2 top-[26px] z-10 h-[176px] w-[176px] -translate-x-1/2 rounded-[8px] object-cover"
+                  className="absolute left-1/2 z-10 h-[206px] w-[206px] -translate-x-1/2 rounded-[8px] object-cover"
+                  style={{ top: `${selectingImageTop}px` }}
                   draggable={false}
                 />
               )}
@@ -3027,7 +3092,6 @@ function EarlyRegistrationDialog({
         : `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
   const canSubmit = digits.length === 11 && required;
   const canBypassRegistration =
-    import.meta.env.DEV ||
     new URLSearchParams(window.location.search).get("preview") === "1";
 
   useEffect(() => {
@@ -3165,21 +3229,20 @@ function EarlyRegistrationDialog({
           >
             x
           </button>
-          <h2
-            className="text-[19px] leading-[1.4] tracking-[0.3px] text-[#36501e]"
-            style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
-          >
-            {view === "terms" ? "개인정보 수집 및 이용 동의" : "얼리 농장주 등록"}
-          </h2>
-          {view === "form" && (
-            <p
-              className="mt-[12px] text-[13px] leading-[1.35] tracking-[0.1px] text-[#68553e]"
-              style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
+          {view === "terms" ? (
+            <h2
+              className="text-[19px] leading-[1.4] tracking-[0.3px] text-[#36501e]"
+              style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
             >
-              앱이 출시되면 문자로 알려드려요
-              <br />
-              사전예약자에게는 한정 보상을 드려요
-            </p>
+              개인정보 수집 및 이용 동의
+            </h2>
+          ) : (
+            <img
+              src={imgRegistrationModalHeading}
+              alt="1기 포착팜 등록. 앱이 출시되면 문자를 통해 앱 링크와 보상 쿠폰번호를 보내드려요!"
+              className="h-auto w-[270px] max-w-full object-contain"
+              draggable={false}
+            />
           )}
         </div>
 
@@ -3235,32 +3298,30 @@ function EarlyRegistrationDialog({
                 >
                   {required ? "✓" : ""}
                 </span>
-                <span
-                  className="min-w-0 text-[9px] tracking-[0.1px] text-[#45372a]"
-                  style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
-                >
-                  <span className="text-[#628d38]">[필수]</span> 개인정보 수집 및 이용 동의
-                </span>
+                <img
+                  src={imgRequiredPrivacyConsent}
+                  alt="[필수] 개인정보 수집 및 이용 동의"
+                  className="h-auto w-[150px] max-w-full object-contain"
+                  draggable={false}
+                />
               </button>
               <button
                 type="button"
                 onClick={() => {
                   setView("terms");
                 }}
-                className="ml-[9px] shrink-0 text-[10px] tracking-[0.2px] text-[#628d38] underline-offset-2"
+                className="ml-[9px] shrink-0 cursor-pointer text-[10px] tracking-[0.2px] text-[#628d38] underline-offset-2"
                 style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
               >
                 보기
               </button>
               </div>
-              <p
-                className="mt-[10px] text-[8px] leading-[1.55] tracking-[0.05px] text-[#8f7755]"
-                style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
-              >
-                휴대폰 번호는 앱 출시 안내 및 사전예약 보상 쿠폰 발송 목적으로만
-                <br />
-                사용되며, 사전예약 이벤트 종료 후 1개월 뒤 삭제됩니다.
-              </p>
+              <img
+                src={imgPrivacyRetentionNotice}
+                alt="휴대폰 번호는 앱 출시 안내 및 사전예약 보상 쿠폰 발송 목적으로만 사용되며, 사전예약 이벤트 종료 후 1개월 뒤 삭제됩니다."
+                className="mt-[10px] h-auto w-full object-contain"
+                draggable={false}
+              />
             </div>
 
             <div className="mt-[27px] flex justify-center">
