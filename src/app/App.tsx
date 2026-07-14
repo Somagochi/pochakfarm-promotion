@@ -149,6 +149,8 @@ const PROCESSING_SELECTING_PROMPT_IMAGE =
   "/assets/processing-selecting-prompt.png";
 const CARD_PACK_OPEN_PROMPT_IMAGE = "/assets/card-pack-open-prompt.png";
 const CARD_PACK_CUT_PROMPT_IMAGE = "/assets/card-pack-cut-prompt.png";
+const CARD_GENERATION_FINISHING_PROMPT_IMAGE =
+  "/assets/card-generation-finishing-prompt.png";
 const CHOOSE_ONE_PROMPT_IMAGE = "/assets/choose-one-prompt.png";
 const CARD_PACK_FRONT_IMAGE = "/assets/card-pack-front.png";
 const CARD_PACK_BACK_IMAGE = "/assets/card-pack-back.png";
@@ -1393,12 +1395,12 @@ function CardPackPanel({
               draggable={false}
             />
           ) : (
-            <p
-              className="mt-[24px] text-center text-[14px] tracking-[.4px] text-white"
-              style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
-            >
-              카드 생성을 마무리하고 있어요
-            </p>
+            <img
+              src={CARD_GENERATION_FINISHING_PROMPT_IMAGE}
+              alt="카드 생성을 마무리하고 있어요"
+              className="mt-[8px] h-auto w-[300px] max-w-full object-contain"
+              draggable={false}
+            />
           )}
         </div>
         <div className="relative flex h-[360px] w-full items-center justify-center overflow-visible">
