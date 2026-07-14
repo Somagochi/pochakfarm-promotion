@@ -83,7 +83,9 @@ const UPLOAD_IMAGE_QUALITY = 0.82;
 const NAME_FILTER = /[^ㄱ-ㅎ가-힣a-zA-Z0-9\s]/g;
 const SHARE_BUTTON_FRAME_FILTER =
   "brightness(0) saturate(100%) invert(88%) sepia(13%) saturate(418%) hue-rotate(356deg) brightness(95%) contrast(88%)";
-const SHARE_LINK_ORIGIN = "https://pochakfarm.store";
+const SHARE_LINK_ORIGIN = (
+  import.meta.env.VITE_SHARE_LINK_ORIGIN || window.location.origin
+).replace(/\/+$/, "");
 
 type GeneratedCardAssets = {
   cardImage: string;
@@ -1571,10 +1573,11 @@ function CuttableCardPack({ onCut }: { onCut: () => void }) {
 
 // ── PackOpeningOverlay ────────────────────────────────────────
 // Figma motion 6570:396 — plays once after the user finishes slicing.
-function PackOpeningOverlay({ characterName, assets, isReady, onResult, onRegister }: {
+function PackOpeningOverlay({ characterName, assets, isReady, onWaitForResult, onResult, onRegister }: {
   characterName: string;
   assets: GeneratedCardAssets;
   isReady: boolean;
+  onWaitForResult: () => void;
   onResult: () => void;
   onRegister?: () => void;
 }) {
@@ -1702,6 +1705,7 @@ function PackOpeningOverlay({ characterName, assets, isReady, onResult, onRegist
               return;
             }
             trackEvent("card_pack_waiting_for_response");
+            onWaitForResult();
             setOpeningScene("waiting");
           }}
         />
@@ -2113,6 +2117,8 @@ function ClassicV2Version() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isNameComposingRef = useRef(false);
   const conversionAbortRef = useRef<AbortController | null>(null);
+  const pendingCharacterizationRef = useRef<CharacterizationResponse | null>(null);
+  const isPollingCharacterizationRef = useRef(false);
   const isButtonActive =
     !!uploadedImage && characterName.trim().length > 0;
   const isPreviewMode = searchParams.get("preview") === "1";
@@ -2259,6 +2265,85 @@ function ClassicV2Version() {
     }
   }, []);
 
+  const startCharacterizationPolling = useCallback(async () => {
+    const pendingCharacterization = pendingCharacterizationRef.current;
+    if (!pendingCharacterization || isPollingCharacterizationRef.current) return;
+
+    conversionAbortRef.current?.abort();
+    const controller = new AbortController();
+    conversionAbortRef.current = controller;
+    isPollingCharacterizationRef.current = true;
+    let characterization = pendingCharacterization;
+
+    try {
+      while (!controller.signal.aborted) {
+        const pollResponse = await fetch(
+          `/api/characterizations/public/${encodeURIComponent(characterization.characterizationId)}`,
+          {
+            method: "GET",
+            credentials: "include",
+            signal: controller.signal,
+          },
+        );
+        const pollPayload = await pollResponse.json();
+        if (!pollResponse.ok) {
+          throw new Error(getApiErrorMessage(pollPayload));
+        }
+
+        const polledCharacterization = getCharacterizationResponse(pollPayload);
+        characterization = {
+          ...characterization,
+          ...polledCharacterization,
+          characterizationId: characterization.characterizationId,
+          cardType: polledCharacterization.cardType || characterization.cardType,
+        };
+        pendingCharacterizationRef.current = characterization;
+
+        const isCompleted =
+          characterization.status === "SUCCEEDED" ||
+          !!characterization.resultImageUrl;
+        if (isCompleted) {
+          if (!characterization.resultImageUrl) {
+            throw new Error("완료 응답에 resultImageUrl이 없어요.");
+          }
+          setGeneratedAssets({
+            cardImage: characterization.resultImageUrl,
+            cardBackImage: getCardBackImage(characterization.cardType),
+            characterizationId: characterization.characterizationId,
+          });
+          setConversionStatus("success");
+          pendingCharacterizationRef.current = null;
+          trackEvent("convert_completed", { mode: "api" });
+          return;
+        }
+
+        if (["FAILED", "FAILURE", "CANCELED", "CANCELLED"].includes(characterization.status)) {
+          throw new Error(
+            characterization.failureReason || "카드 이미지 변환에 실패했어요.",
+          );
+        }
+
+        await waitForPollInterval(controller.signal);
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      trackEvent("convert_failed", {
+        message: error instanceof Error ? error.message : "unknown_error",
+      });
+      setGenerationError(
+        error instanceof Error ? error.message : "카드 이미지를 만들지 못했어요.",
+      );
+      setShowGenerationErrorModal(true);
+      setConversionStatus("error");
+      setPhase("idle");
+    } finally {
+      isPollingCharacterizationRef.current = false;
+      if (conversionAbortRef.current === controller) {
+        conversionAbortRef.current = null;
+      }
+    }
+  }, []);
+
   const handleConvert = useCallback(async () => {
     if (!isButtonActive) return;
     conversionAbortRef.current?.abort();
@@ -2272,11 +2357,14 @@ function ClassicV2Version() {
     setShowGenerationErrorModal(false);
     setConversionStatus("pending");
     setGeneratedAssets(null);
+    pendingCharacterizationRef.current = null;
+    isPollingCharacterizationRef.current = false;
     setPhase("processing");
 
     if (isPreviewMode) {
       setGeneratedAssets(FALLBACK_CARD_ASSETS);
       setConversionStatus("success");
+      conversionAbortRef.current = null;
       trackEvent("convert_completed", {
         mode: "preview",
       });
@@ -2309,7 +2397,7 @@ function ClassicV2Version() {
         throw new Error(getApiErrorMessage(payload));
       }
 
-      let characterization = getCharacterizationResponse(payload);
+      const characterization = getCharacterizationResponse(payload);
       if (!characterization.characterizationId) {
         throw new Error("카드 생성 응답에 characterizationId가 없어요.");
       }
@@ -2320,47 +2408,8 @@ function ClassicV2Version() {
         cardBackImage,
         characterizationId: characterization.characterizationId,
       });
-
-      while (!controller.signal.aborted) {
-        if (characterization.status === "SUCCEEDED") {
-          if (!characterization.resultImageUrl) {
-            throw new Error("완료 응답에 resultImageUrl이 없어요.");
-          }
-          setGeneratedAssets({
-            cardImage: characterization.resultImageUrl,
-            cardBackImage,
-            characterizationId: characterization.characterizationId,
-          });
-          setConversionStatus("success");
-          trackEvent("convert_completed", { mode: "api" });
-          return;
-        }
-
-        if (["FAILED", "FAILURE", "CANCELED", "CANCELLED"].includes(characterization.status)) {
-          throw new Error(
-            characterization.failureReason || "카드 이미지 변환에 실패했어요.",
-          );
-        }
-
-        await waitForPollInterval(controller.signal);
-        const pollResponse = await fetch(
-          `/api/characterizations/public/${encodeURIComponent(characterization.characterizationId)}`,
-          {
-            method: "GET",
-            credentials: "include",
-            signal: controller.signal,
-          },
-        );
-        const pollPayload = await pollResponse.json();
-        if (!pollResponse.ok) {
-          throw new Error(getApiErrorMessage(pollPayload));
-        }
-        characterization = {
-          ...characterization,
-          ...getCharacterizationResponse(pollPayload),
-          characterizationId: characterization.characterizationId,
-        };
-      }
+      pendingCharacterizationRef.current = characterization;
+      conversionAbortRef.current = null;
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       trackEvent("convert_failed", {
@@ -2390,6 +2439,8 @@ function ClassicV2Version() {
   const handleReset = useCallback(() => {
     conversionAbortRef.current?.abort();
     conversionAbortRef.current = null;
+    pendingCharacterizationRef.current = null;
+    isPollingCharacterizationRef.current = false;
     window.history.replaceState(
       null,
       "",
@@ -2758,6 +2809,7 @@ function ClassicV2Version() {
             characterName={characterName}
             assets={generatedAssets ?? FALLBACK_CARD_ASSETS}
             isReady={conversionStatus === "success"}
+            onWaitForResult={startCharacterizationPolling}
             onResult={handleResult}
             onRegister={() => setRegistrationView("cta")}
           />
