@@ -362,6 +362,12 @@ function getGeneratedCardAssets(payload: unknown): GeneratedCardAssets {
               : typeof record.characterization_id === "string"
                 ? record.characterization_id
                 : "";
+  const cardType =
+    typeof data.cardType === "string"
+      ? data.cardType.toUpperCase()
+      : typeof record.cardType === "string"
+        ? record.cardType.toUpperCase()
+        : "";
 
   return {
     cardImage:
@@ -371,7 +377,7 @@ function getGeneratedCardAssets(payload: unknown): GeneratedCardAssets {
     cardBackImage:
       typeof data.cardBackImageUrl === "string"
         ? data.cardBackImageUrl
-        : FALLBACK_CARD_ASSETS.cardBackImage,
+        : getCardBackImage(cardType),
     ...(characterizationId
       ? { characterizationId }
       : {}),
