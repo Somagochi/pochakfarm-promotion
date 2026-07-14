@@ -1095,9 +1095,6 @@ function OnboardingCarousel({
             type="button"
             aria-label={`온보딩 ${index + 1} 보기`}
             onClick={() => {
-              trackEvent("onboarding_slide_selected", {
-                slide_index: index + 1,
-              });
               restartAutoPlay();
               setActiveSlide(index);
             }}
@@ -1823,15 +1820,6 @@ function ResultOverlay({
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
   const dragStartAng = useRef(0);
-  const trackedCardInteractionRef = useRef(false);
-
-  const trackCardInteraction = useCallback((method: "mouse" | "touch") => {
-    if (trackedCardInteractionRef.current) return;
-    trackedCardInteractionRef.current = true;
-    trackEvent("result_card_interacted", {
-      method,
-    });
-  }, []);
 
   useEffect(() => {
     // 0.8s: flip card back → front (0 → 360 so front shows)
@@ -1870,7 +1858,6 @@ function ResultOverlay({
   // Touch swipe handlers
   const onTouchStart = (e: React.TouchEvent) => {
     if (mode !== "spinning") return;
-    trackCardInteraction("touch");
     isDragging.current = true;
     dragStartX.current = e.touches[0].clientX;
     dragStartAng.current = angle;
@@ -1888,7 +1875,6 @@ function ResultOverlay({
   // Mouse drag — global listeners so it works outside the element
   const onMouseDown = (e: React.MouseEvent) => {
     if (mode !== "spinning") return;
-    trackCardInteraction("mouse");
     isDragging.current = true;
     dragStartX.current = e.clientX;
     dragStartAng.current = angle;
@@ -2337,7 +2323,6 @@ function ClassicV2Version() {
         cardImage={generatedAssets?.cardImage ?? null}
         cardBackImage={generatedAssets?.cardBackImage ?? null}
         onCreateNew={handleReset}
-        shareUrl={createCtaShareLink(generatedAssets?.characterizationId)}
       />
     );
   }
@@ -2451,7 +2436,6 @@ function ClassicV2Version() {
                 accept="image/jpeg,image/png,image/webp"
                 onChange={(e) => {
                   if (e.target.files?.[0]) {
-                    trackEvent("photo_selected");
                     readFile(e.target.files[0]);
                   }
                 }}
@@ -2476,7 +2460,6 @@ function ClassicV2Version() {
                   e.preventDefault();
                   setIsDragging(false);
                   if (e.dataTransfer.files[0]) {
-                    trackEvent("photo_dropped");
                     readFile(e.dataTransfer.files[0]);
                   }
                 }}
@@ -3240,15 +3223,18 @@ function CTAPage({
   const handleShare = async () => {
     trackEvent("cta_share_clicked");
     if (await copyShareLink(createCtaShareLink(characterizationId))) {
-      trackEvent("cta_share_copied");
       setShowToast(true);
     }
   };
 
   const handleImageSave = async () => {
+    trackEvent("card_save_clicked");
     try {
       await saveCardImage(cardImage || imgCharFront, characterName || "pixel-animal");
-    } catch {
+    } catch (error) {
+      trackEvent("card_save_failed", {
+        message: error instanceof Error ? error.message : "unknown_error",
+      });
     }
   };
 
@@ -3486,25 +3472,14 @@ function CompletePage({
   cardImage,
   cardBackImage,
   onCreateNew,
-  shareUrl,
 }: {
   cardImage: string | null;
   cardBackImage: string | null;
   onCreateNew: () => void;
-  shareUrl: string;
 }) {
-  const [showToast, setShowToast] = useState(false);
   useEffect(() => {
     trackEvent("registration_complete_page_viewed");
   }, []);
-
-  const handleShare = async () => {
-    trackEvent("registration_complete_share_clicked");
-    if (await copyShareLink(shareUrl)) {
-      trackEvent("registration_complete_share_copied");
-      setShowToast(true);
-    }
-  };
 
   const handleCreateNew = () => {
     onCreateNew();
@@ -3612,10 +3587,6 @@ function CompletePage({
           </div>
         </WindowPanel>
       </main>
-      <ToastNotification
-        visible={showToast}
-        onHidden={() => setShowToast(false)}
-      />
     </div>
   );
 }
