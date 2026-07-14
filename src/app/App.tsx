@@ -2,6 +2,7 @@
   useState,
   useRef,
   useEffect,
+  useLayoutEffect,
   useCallback,
 } from "react";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
@@ -1753,7 +1754,11 @@ function CardSkyScene({
 }) {
   const [canSelect, setCanSelect] = useState(false);
   const chooseTitleRef = useRef<HTMLParagraphElement>(null);
+  const choosePromptRef = useRef<HTMLImageElement>(null);
+  const firstCardRef = useRef<HTMLButtonElement>(null);
+  const cardFieldRef = useRef<HTMLDivElement>(null);
   const [choosePromptWidth, setChoosePromptWidth] = useState<number | null>(null);
+  const [cardFieldOffsetY, setCardFieldOffsetY] = useState(0);
   const cards = [
     { delay: 0, x: "17.82%", y: "50%" },
     { delay: 1367, x: "50%", y: "50%" },
@@ -1767,8 +1772,8 @@ function CardSkyScene({
     return () => window.clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    if (!canSelect || !chooseTitleRef.current) return;
+  useLayoutEffect(() => {
+    if (!chooseTitleRef.current) return;
 
     const title = chooseTitleRef.current;
     const updatePromptWidth = () => {
@@ -1781,7 +1786,38 @@ function CardSkyScene({
     document.fonts?.ready.then(updatePromptWidth);
 
     return () => observer.disconnect();
-  }, [canSelect]);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!choosePromptRef.current || !firstCardRef.current || !cardFieldRef.current) return;
+
+    const updateCardOffset = () => {
+      const promptBottom = choosePromptRef.current?.getBoundingClientRect().bottom;
+      const cardField = cardFieldRef.current;
+      const firstCard = firstCardRef.current;
+      if (promptBottom === undefined || !cardField || !firstCard) return;
+
+      const unshiftedFieldTop =
+        cardField.getBoundingClientRect().top - cardFieldOffsetY;
+      const firstCardTop =
+        unshiftedFieldTop + cardField.offsetHeight * 0.5 - firstCard.offsetHeight * 0.5;
+      const nextOffset = 89.86 - (firstCardTop - promptBottom);
+      if (Math.abs(nextOffset - cardFieldOffsetY) < 0.1) return;
+      setCardFieldOffsetY(nextOffset);
+    };
+    const observer = new ResizeObserver(updateCardOffset);
+
+    observer.observe(choosePromptRef.current);
+    observer.observe(firstCardRef.current);
+    observer.observe(cardFieldRef.current);
+    window.addEventListener("resize", updateCardOffset);
+    window.requestAnimationFrame(updateCardOffset);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateCardOffset);
+    };
+  }, [cardFieldOffsetY, choosePromptWidth]);
 
   return (
     <div
@@ -1789,8 +1825,10 @@ function CardSkyScene({
       aria-label={canSelect ? "카드 한 장을 선택하세요" : "카드가 하늘에 펼쳐지는 중"}
     >
       <div className="flex h-[118px] w-full flex-col items-center justify-start pt-[8px]">
-        {canSelect && (
-          <>
+        <div
+          className="flex flex-col items-center"
+          style={{ visibility: canSelect ? "visible" : "hidden" }}
+        >
             <p
               ref={chooseTitleRef}
               className="translate-y-[16px] text-center text-[22px] tracking-[2px]"
@@ -1811,6 +1849,7 @@ function CardSkyScene({
               Choose One!
             </p>
             <img
+              ref={choosePromptRef}
               src={CHOOSE_ONE_PROMPT_IMAGE}
               alt="하나를 선택해 보세요"
               className="mt-[8px] h-auto max-w-full object-contain"
@@ -1819,11 +1858,14 @@ function CardSkyScene({
               }}
               draggable={false}
             />
-          </>
-        )}
+        </div>
       </div>
 
-      <div className="relative h-[464px] w-full overflow-hidden">
+      <div
+        ref={cardFieldRef}
+        className="relative h-[464px] w-full overflow-hidden"
+        style={{ transform: `translateY(${cardFieldOffsetY}px)` }}
+      >
         <div
           className="pointer-events-none absolute inset-0"
           style={{ background: "radial-gradient(circle at 50% 52%, rgba(255,207,48,.22), transparent 62%)" }}
@@ -1831,6 +1873,7 @@ function CardSkyScene({
         {cards.map((card, index) => (
           <button
             key={card.delay}
+            ref={index === 0 ? firstCardRef : undefined}
             type="button"
             disabled={!canSelect}
             aria-label={`${index + 1}번 카드 선택`}
