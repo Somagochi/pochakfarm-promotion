@@ -170,6 +170,7 @@ const CARD_PACK_CUT_PROMPT_IMAGE = "/assets/card-pack-cut-prompt.png";
 const CARD_GENERATION_FINISHING_PROMPT_IMAGE =
   "/assets/card-generation-finishing-prompt.png";
 const CHOOSE_ONE_PROMPT_IMAGE = "/assets/choose-one-prompt.png";
+const CHOOSE_ONE_PROMPT_TEXT_BOTTOM_RATIO = 149 / 250;
 const CARD_PACK_FRONT_IMAGE = "/assets/card-pack-front.png";
 const CARD_PACK_BACK_IMAGE = "/assets/card-pack-back.png";
 const SCANNER_LOTTIE = "/assets/scanner.lottie";
@@ -1792,16 +1793,20 @@ function CardSkyScene({
     if (!choosePromptRef.current || !firstCardRef.current || !cardFieldRef.current) return;
 
     const updateCardOffset = () => {
-      const promptBottom = choosePromptRef.current?.getBoundingClientRect().bottom;
+      const promptRect = choosePromptRef.current?.getBoundingClientRect();
       const cardField = cardFieldRef.current;
       const firstCard = firstCardRef.current;
-      if (promptBottom === undefined || !cardField || !firstCard) return;
+      if (!promptRect || !cardField || !firstCard) return;
+
+      const promptTextBottom =
+        promptRect.top +
+        promptRect.height * CHOOSE_ONE_PROMPT_TEXT_BOTTOM_RATIO;
 
       const unshiftedFieldTop =
         cardField.getBoundingClientRect().top - cardFieldOffsetY;
       const firstCardTop =
         unshiftedFieldTop + cardField.offsetHeight * 0.5 - firstCard.offsetHeight * 0.5;
-      const nextOffset = 89.86 - (firstCardTop - promptBottom);
+      const nextOffset = 89.86 - (firstCardTop - promptTextBottom);
       if (Math.abs(nextOffset - cardFieldOffsetY) < 0.1) return;
       setCardFieldOffsetY(nextOffset);
     };
