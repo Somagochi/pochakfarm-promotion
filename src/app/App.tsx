@@ -168,6 +168,7 @@ const CARD_GENERATION_FINISHING_PROMPT_IMAGE =
   "/assets/card-generation-finishing-prompt.png";
 const CHOOSE_ONE_PROMPT_IMAGE = "/assets/choose-one-prompt.png";
 const CARD_PACK_FRONT_IMAGE = "/assets/card-pack-front.png";
+const CARD_PACK_BACK_IMAGE = "/assets/card-pack-back.png";
 const SCANNER_LOTTIE = "/assets/scanner.lottie";
 const CARD_SELECT_FRONT_DELAYS = [
   0, 500, 1000, 1500, 1998.798, 2500, 2998.798, 3497.596, 3998.798,
@@ -1179,10 +1180,8 @@ function OnboardingCarousel({
 // ── ProcessingPanel — loading overlay ────────────────────────
 function ProcessingPanel({
   uploadedImage,
-  cardBackImage,
 }: {
   uploadedImage: string | null;
-  cardBackImage: string;
 }) {
   const [loadingStage, setLoadingStage] = useState<"scan" | "card">("scan");
 
@@ -1271,7 +1270,7 @@ function ProcessingPanel({
               {CARD_SELECT_BACK_DELAYS.map((delay, index) => (
                 <img
                   key={`card-back-${delay}`}
-                  src={cardBackImage}
+                  src={CARD_PACK_BACK_IMAGE}
                   alt=""
                   className="pointer-events-none absolute left-1/2 top-[91px] z-0 h-[157px] w-[117px] object-contain"
                   draggable={false}
@@ -2715,12 +2714,7 @@ function ClassicV2Version() {
         )}
 
         {phase === "processing" && (
-          <ProcessingPanel
-            uploadedImage={uploadedImage}
-            cardBackImage={
-              generatedAssets?.cardBackImage ?? FALLBACK_CARD_ASSETS.cardBackImage
-            }
-          />
+          <ProcessingPanel uploadedImage={uploadedImage} />
         )}
 
         {phase === "pack" && (
