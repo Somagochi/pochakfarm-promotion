@@ -3546,6 +3546,26 @@ function CTAPage({
   const [showToast, setShowToast] = useState(false);
   const [showHomeConfirm, setShowHomeConfirm] = useState(false);
 
+  useLayoutEffect(() => {
+    const scrollToTop = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+
+    scrollToTop();
+    const firstFrame = window.requestAnimationFrame(() => {
+      scrollToTop();
+      window.requestAnimationFrame(scrollToTop);
+    });
+    const fallbackTimer = window.setTimeout(scrollToTop, 100);
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      window.clearTimeout(fallbackTimer);
+    };
+  }, []);
+
   useEffect(() => {
     trackEvent("cta_page_viewed", {
       has_character_name: !!characterName,
@@ -3599,7 +3619,7 @@ function CTAPage({
                 className="text-[17px] leading-[1.4] tracking-[0.9px] text-[#32322d]"
                 style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
               >
-                {characterName || "픽셀 동물"}을
+                {characterName || "픽셀 동물"}을(를)
                 <br />
                 농장에 입주시킬 수 있어요
               </p>
