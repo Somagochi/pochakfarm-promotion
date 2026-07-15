@@ -2214,6 +2214,8 @@ function ClassicV2Version() {
     useState<ConversionStatus>("idle");
   const [showGenerationErrorModal, setShowGenerationErrorModal] =
     useState(false);
+  const [generationErrorReturnsHome, setGenerationErrorReturnsHome] =
+    useState(false);
   const [showImageGuide, setShowImageGuide] = useState(false);
   const [registrationView, setRegistrationView] = useState<
     "cta" | "complete" | null
@@ -2422,7 +2424,12 @@ function ClassicV2Version() {
           return;
         }
 
-        if (["FAILED", "FAILURE", "CANCELED", "CANCELLED"].includes(characterization.status)) {
+        if (characterization.status === "FAILED") {
+          setGenerationErrorReturnsHome(true);
+          throw new Error("잠시 후에 변환을 시도해주세요");
+        }
+
+        if (["FAILURE", "CANCELED", "CANCELLED"].includes(characterization.status)) {
           throw new Error(
             characterization.failureReason || "카드 이미지 변환에 실패했어요.",
           );
@@ -2460,6 +2467,7 @@ function ClassicV2Version() {
     });
     setGenerationError("");
     setShowGenerationErrorModal(false);
+    setGenerationErrorReturnsHome(false);
     setConversionStatus("pending");
     setGeneratedAssets(null);
     pendingCharacterizationRef.current = null;
@@ -2578,6 +2586,7 @@ function ClassicV2Version() {
     setRegistrationView(null);
     setGenerationError("");
     setShowGenerationErrorModal(false);
+    setGenerationErrorReturnsHome(false);
     window.scrollTo(0, 0);
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
@@ -2952,7 +2961,13 @@ function ClassicV2Version() {
           >
             <button
               type="button"
-              onClick={() => setShowGenerationErrorModal(false)}
+              onClick={() => {
+                if (generationErrorReturnsHome) {
+                  handleReset();
+                  return;
+                }
+                setShowGenerationErrorModal(false);
+              }}
               className="absolute right-[8px] top-[6px] flex h-8 w-8 items-center justify-center text-[28px] leading-none text-[#b7ad9a]"
               aria-label="닫기"
             >
@@ -2978,7 +2993,13 @@ function ClassicV2Version() {
             </p>
             <button
               type="button"
-              onClick={() => setShowGenerationErrorModal(false)}
+              onClick={() => {
+                if (generationErrorReturnsHome) {
+                  handleReset();
+                  return;
+                }
+                setShowGenerationErrorModal(false);
+              }}
               className="mt-[26px] flex h-[46px] w-full items-center justify-center rounded-[6px] bg-[#36501e] text-[14px] tracking-[0.7px] text-white"
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
             >
