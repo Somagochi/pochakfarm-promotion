@@ -855,11 +855,20 @@ function PixelButton({
 // ── WindowPanel ──────────────────────────────────────────────
 function WindowPanel({
   children,
+  shadow = true,
 }: {
   children: React.ReactNode;
+  shadow?: boolean;
 }) {
   return (
-    <div className="flex flex-col w-full">
+    <div
+      className="flex w-full flex-col"
+      style={
+        shadow
+          ? { filter: "drop-shadow(6px 6px 0 rgba(0, 0, 0, 0.5))" }
+          : undefined
+      }
+    >
       <div
         className="relative w-full shrink-0 overflow-hidden"
         style={{ aspectRatio: "331 / 81" }}
@@ -2921,7 +2930,8 @@ function ClassicV2Version() {
             className="relative w-[314px] rounded-[5px] bg-[#faf5eb] px-[30px] pb-[30px] pt-[30px]"
             style={{
               border: "2px solid #1f1a13",
-              boxShadow: "0 4px 0 #1f1a13",
+              boxShadow:
+                "0 4px 0 #1f1a13, 6px 6px 0 rgba(0,0,0,0.5)",
             }}
           >
             <button
@@ -2974,7 +2984,7 @@ function ClassicV2Version() {
             aria-label="이미지 가이드 닫기"
             onClick={() => setShowImageGuide(false)}
           />
-          <div className="relative z-[1] w-full max-w-[330px] overflow-hidden rounded-[8px]">
+          <div className="relative z-[1] w-full max-w-[330px] overflow-hidden rounded-[8px] shadow-[6px_6px_0_rgba(0,0,0,0.5)]">
             <img
               src={imgImageGuideModal}
               alt="이미지 가이드"
@@ -3212,7 +3222,8 @@ function EarlyRegistrationDialog({
         className="relative max-h-[calc(100dvh-32px)] w-[314px] overflow-y-auto rounded-[5px] bg-[#faf5eb] px-[38px] pb-[34px] pt-[30px]"
         style={{
           border: "2px solid #1f1a13",
-          boxShadow: "0 4px 0 #1f1a13",
+          boxShadow:
+            "0 4px 0 #1f1a13, 6px 6px 0 rgba(0,0,0,0.5)",
         }}
       >
         <div className="relative text-center">
@@ -3422,7 +3433,8 @@ function HomeConfirmDialog({
         className="relative w-[314px] rounded-[5px] bg-[#faf5eb] px-[30px] pb-[30px] pt-[30px]"
         style={{
           border: "2px solid #1f1a13",
-          boxShadow: "0 4px 0 #1f1a13",
+          boxShadow:
+            "0 4px 0 #1f1a13, 6px 6px 0 rgba(0,0,0,0.5)",
         }}
       >
         <button
@@ -3539,8 +3551,11 @@ function CTAPage({
       >
         <IntroHeader onHome={onCreateNew} />
         <div className="flex w-full flex-1 items-center justify-center py-[24px]">
-        <div className="w-full max-w-[331px]">
-          <WindowPanel>
+        <div
+          className="w-full max-w-[331px]"
+          style={{ filter: "drop-shadow(6px 6px 0 rgba(0, 0, 0, 0.5))" }}
+        >
+          <WindowPanel shadow={false}>
           <div className="flex flex-col items-center gap-4 px-6 pb-6 pt-[27px]">
             <div className="flex h-[80.4px] w-[211px] flex-col items-center justify-start text-center">
               <p
@@ -3678,17 +3693,19 @@ function CTAPage({
                 {isSharedEntry ? "나도 포착하기" : "친구에게 자랑하기"}
               </PixelButton>
 
-              <button
-                type="button"
-                onClick={() => {
-                  trackEvent("cta_home_clicked");
-                  setShowHomeConfirm(true);
-                }}
-                className="mt-[3px] cursor-pointer text-[11px] tracking-[0.35px] text-[#6a6a61] transition-colors hover:text-[#32322d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#628d38]/60"
-                style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
-              >
-                홈으로 돌아가기
-              </button>
+              {!isSharedEntry && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    trackEvent("cta_home_clicked");
+                    setShowHomeConfirm(true);
+                  }}
+                  className="mt-[3px] cursor-pointer text-[11px] tracking-[0.35px] text-[#6a6a61] transition-colors hover:text-[#32322d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#628d38]/60"
+                  style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
+                >
+                  홈으로 돌아가기
+                </button>
+              )}
             </div>
           </div>
           </WindowPanel>
