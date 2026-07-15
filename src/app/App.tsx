@@ -1275,7 +1275,7 @@ function ProcessingPanel({
           className="relative flex h-[360px] w-[min(100vw,397px)] max-w-none items-center justify-center overflow-hidden"
         >
           {loadingStage === "scan" ? (
-            <div className="relative h-[220px] w-[220px] -translate-y-[41.45px] overflow-visible">
+            <div className="relative h-[206px] w-[206px] -translate-y-[48.45px] overflow-visible">
               <div className="absolute inset-0 z-0 overflow-hidden rounded-[8px]">
                 {uploadedImage && (
                   <img
@@ -1320,7 +1320,7 @@ function ProcessingPanel({
                 <img
                   src={uploadedImage}
                   alt=""
-                  className="absolute left-1/2 top-[26.04px] z-10 h-[176px] w-[176px] -translate-x-1/2 rounded-[8px] object-cover"
+                  className="absolute left-1/2 top-[26.04px] z-10 h-[206px] w-[206px] -translate-x-1/2 rounded-[8px] object-cover"
                   draggable={false}
                 />
               )}
@@ -1828,15 +1828,11 @@ function CardSkyScene({
       const firstCard = firstCardRef.current;
       if (!promptRect || !cardField || !firstCard) return;
 
-      const promptTextBottom =
-        promptRect.top +
-        promptRect.height * CHOOSE_ONE_PROMPT_TEXT_BOTTOM_RATIO;
-
       const unshiftedFieldTop =
         cardField.getBoundingClientRect().top - cardFieldOffsetY;
       const firstCardTop =
         unshiftedFieldTop + cardField.offsetHeight * 0.5 - firstCard.offsetHeight * 0.5;
-      const nextOffset = 89.86 - (firstCardTop - promptTextBottom);
+      const nextOffset = 89.86 - (firstCardTop - promptRect.bottom);
       if (Math.abs(nextOffset - cardFieldOffsetY) < 0.1) return;
       setCardFieldOffsetY(nextOffset);
     };
