@@ -6,7 +6,6 @@
   useCallback,
 } from "react";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
-import { XIcon } from "lucide-react";
 import { trackEvent } from "../analytics";
 import imgBtnSmall from "../assets/ui/btn-sm.png";
 import imgBtnSmall2 from "../assets/ui/btn-sm-2.png";
@@ -2472,6 +2471,9 @@ function ClassicV2Version() {
         }
       }
       if (!response.ok) {
+        if (response.status === 503) {
+          throw new Error("잠시 후에 변환을 시도해주세요");
+        }
         throw new Error(getApiErrorMessage(payload));
       }
 
@@ -2892,36 +2894,52 @@ function ClassicV2Version() {
         )}
       {showGenerationErrorModal && (
         <div
-          className="fixed inset-0 z-[260] flex items-center justify-center bg-black/60 px-6 backdrop-blur-[5px]"
+          className="fixed inset-0 z-[260] flex items-center justify-center bg-black/70 px-4"
           role="alertdialog"
           aria-modal="true"
-          aria-label="변환 오류"
+          aria-labelledby="generation-error-title"
         >
-          <div className="w-full max-w-[320px]">
-            <WindowPanel>
-              <div className="flex flex-col items-center px-7 py-7">
-                <p
-                  className="text-center text-[17px] tracking-[.6px] text-[#32322d]"
-                  style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
-                >
-                  변환에 실패했어요
-                </p>
-                <pre
-                  className="mt-4 max-h-[180px] w-full overflow-auto whitespace-pre-wrap break-words text-center text-[12px] leading-[1.6] text-[#c84f3d]"
-                  style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
-                >
-                  {generationError}
-                </pre>
-                <button
-                  type="button"
-                  onClick={() => setShowGenerationErrorModal(false)}
-                  className="mt-6 flex h-[44px] w-full items-center justify-center rounded-[8px] bg-[#628d38] text-[14px] tracking-[.8px] text-white"
-                  style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
-                >
-                  확인
-                </button>
-              </div>
-            </WindowPanel>
+          <div
+            className="relative w-[314px] rounded-[5px] bg-[#faf5eb] px-[30px] pb-[30px] pt-[30px]"
+            style={{
+              border: "2px solid #1f1a13",
+              boxShadow: "0 4px 0 #1f1a13",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setShowGenerationErrorModal(false)}
+              className="absolute right-[8px] top-[6px] flex h-8 w-8 items-center justify-center text-[28px] leading-none text-[#b7ad9a]"
+              aria-label="닫기"
+            >
+              <img
+                src="/assets/modal-close.png"
+                alt=""
+                className="h-[24px] w-[24px] object-contain"
+                draggable={false}
+              />
+            </button>
+            <h2
+              id="generation-error-title"
+              className="text-center text-[19px] leading-[1.4] tracking-[0.3px] text-[#36501e]"
+              style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+            >
+              변환에 실패했어요
+            </h2>
+            <p
+              className="mt-[18px] max-h-[180px] w-full overflow-auto whitespace-pre-wrap break-words text-center text-[12px] leading-[1.6] tracking-[0.25px] text-[#6a6a61]"
+              style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
+            >
+              {generationError}
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowGenerationErrorModal(false)}
+              className="mt-[26px] flex h-[46px] w-full items-center justify-center rounded-[6px] bg-[#36501e] text-[14px] tracking-[0.7px] text-white"
+              style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+            >
+              확인
+            </button>
           </div>
         </div>
       )}
@@ -2955,7 +2973,12 @@ function ClassicV2Version() {
               aria-label="이미지 가이드 닫기"
               onClick={() => setShowImageGuide(false)}
             >
-              <XIcon className="h-[24px] w-[24px]" strokeWidth={3} />
+              <img
+                src="/assets/modal-close.png"
+                alt=""
+                className="h-[24px] w-[24px] object-contain"
+                draggable={false}
+              />
             </button>
           </div>
         </div>
@@ -3186,7 +3209,12 @@ function EarlyRegistrationDialog({
             className="absolute right-[-30px] top-[-20px] flex h-8 w-8 items-center justify-center text-[28px] leading-none text-[#b7ad9a]"
             aria-label="닫기"
           >
-            x
+            <img
+              src="/assets/modal-close.png"
+              alt=""
+              className="h-[24px] w-[24px] object-contain"
+              draggable={false}
+            />
           </button>
           {view === "terms" ? (
             <h2
@@ -3385,7 +3413,12 @@ function HomeConfirmDialog({
           className="absolute right-[8px] top-[6px] flex h-8 w-8 items-center justify-center text-[28px] leading-none text-[#b7ad9a]"
           aria-label="닫기"
         >
-          x
+          <img
+            src="/assets/modal-close.png"
+            alt=""
+            className="h-[24px] w-[24px] object-contain"
+            draggable={false}
+          />
         </button>
         <h2
           id="home-confirm-title"
