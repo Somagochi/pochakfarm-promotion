@@ -2226,6 +2226,7 @@ function ClassicV2Version() {
   const isButtonActive =
     !!uploadedImage && characterName.trim().length > 0;
   const isPreviewMode = searchParams.get("preview") === "1";
+  const shouldSimulate503 = searchParams.get("simulate503") === "1";
   const isTransformationOverlayOpen =
     registrationView === null && phase !== "idle";
 
@@ -2465,6 +2466,15 @@ function ClassicV2Version() {
     isPollingCharacterizationRef.current = false;
     setPhase("processing");
 
+    if (shouldSimulate503) {
+      setGenerationError("잠시 후에 변환을 시도해주세요");
+      setShowGenerationErrorModal(true);
+      setConversionStatus("error");
+      setPhase("idle");
+      conversionAbortRef.current = null;
+      return;
+    }
+
     if (isPreviewMode) {
       setGeneratedAssets(FALLBACK_CARD_ASSETS);
       setConversionStatus("success");
@@ -2532,7 +2542,13 @@ function ClassicV2Version() {
       setConversionStatus("error");
       setPhase("idle");
     }
-  }, [characterName, isButtonActive, isPreviewMode, uploadedImage]);
+  }, [
+    characterName,
+    isButtonActive,
+    isPreviewMode,
+    shouldSimulate503,
+    uploadedImage,
+  ]);
 
   const handleOpenPack = useCallback(() => {
     trackEvent("card_pack_opened");
