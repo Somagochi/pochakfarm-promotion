@@ -159,8 +159,6 @@ const ONBOARDING_SLIDES = [
   "/assets/carousel4.png",
 ];
 const LAUNCH_TARGET_TIME = new Date("2026-08-01T00:00:00+09:00").getTime();
-const CARD_GENERATION_FINISHING_PROMPT_IMAGE =
-  "/assets/card-generation-finishing-prompt.png";
 const CARD_PACK_FRONT_IMAGE = "/assets/card-pack-front.png";
 const CARD_PACK_BACK_IMAGE = "/assets/card-pack-back.png";
 const SCANNER_LOTTIE = "/assets/scanner.lottie";
@@ -1764,17 +1762,37 @@ function PackOpeningOverlay({ characterName, assets, isReady, onStartPolling, on
         />
       ) : openingScene === "waiting" ? (
         <div
-          className="flex h-[560px] w-[330px] translate-y-[24px] flex-col items-center"
+          className="absolute left-1/2 top-[174.31px] h-[560px] w-[330px] -translate-x-1/2"
           role="status"
           aria-label="카드 생성 응답 대기 중"
         >
+          <p className="mx-auto flex h-[19.5px] w-[187.24px] shrink-0 items-center justify-center whitespace-nowrap text-center text-[20px] leading-[19.5px] tracking-[1.2px]">
+            <span
+              className="inline-block whitespace-nowrap leading-[22px]"
+              style={{
+                fontFamily: "Galmuri11",
+                fontWeight: 700,
+                color: "transparent",
+                WebkitTextStroke: "1px rgba(255,255,255,0.65)",
+                backgroundImage:
+                  "linear-gradient(90deg, rgba(255,255,255,0.45) 0%, #ffffff 42%, rgba(170,235,255,0.95) 50%, #ffffff 58%, rgba(255,255,255,0.45) 100%)",
+                backgroundClip: "text",
+                WebkitBackgroundClip: "text",
+                backgroundSize: "220% 100%",
+                animation: "textShimmer 1.7s linear infinite",
+                textShadow: "0 0 10px rgba(168,238,255,0.55)",
+              }}
+            >
+              Card Pack Ready
+            </span>
+          </p>
           <img
-            src={CARD_GENERATION_FINISHING_PROMPT_IMAGE}
+            src="/assets/card-generation-finishing-text.png"
             alt="카드 생성을 마무리하고 있어요"
-            className="mt-[34px] h-auto w-[300px] max-w-full object-contain"
+            className="mx-auto mt-[15.56px] block h-[18px] w-[176px] shrink-0 object-contain"
             draggable={false}
           />
-          <div className="flex flex-1 items-center justify-center pb-[70px]">
+          <div className="absolute left-1/2 top-[185.44px] -translate-x-1/2">
             <span
               className="block h-[58px] w-[58px] rounded-full border-[6px] border-white/20 border-t-[#9fe1ff]"
               style={{
@@ -3311,24 +3329,24 @@ function EarlyRegistrationDialog({
               />
             </div>
 
-            <div className="mt-[27px] flex justify-center">
+            <div className="mt-[24px] flex justify-center">
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={!canSubmit || isSubmitting}
-                className="relative flex h-[52px] w-full items-center justify-center text-[19px] tracking-[1.4px] text-white transition-opacity"
+                className="relative h-[60px] w-[240px] shrink-0 overflow-hidden transition-opacity"
                 style={{
-                  background: "#36501e",
-                  clipPath:
-                    "polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px)",
                   cursor: canSubmit && !isSubmitting ? "pointer" : "not-allowed",
-                  fontFamily: "Elice DX Neolli",
-                  fontWeight: 500,
                   opacity: canSubmit && !isSubmitting ? 1 : 0.45,
                 }}
+                aria-label={isSubmitting ? "등록 중" : "등록하기"}
               >
-                {isSubmitting ? "등록 중..." : "등록하기"}
-                <PawMark color="#78985a" />
+                <img
+                  src="/assets/registration-submit-button.png"
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-fill"
+                  draggable={false}
+                />
               </button>
             </div>
           </>
