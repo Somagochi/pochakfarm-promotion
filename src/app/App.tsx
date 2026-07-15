@@ -3755,19 +3755,22 @@ function CompletePage({
   };
 
   return (
-    <div className="min-h-[100dvh] w-full bg-[#628d38] flex justify-center relative overflow-hidden">
+    <div className="relative flex min-h-[100dvh] w-full flex-col items-center overflow-x-hidden bg-[#111111]">
       <style>{KEYFRAMES}</style>
-      <div
-        className="absolute inset-0 pointer-events-none opacity-30"
+      <main
+        className="relative flex min-h-[100dvh] w-full max-w-[397px] flex-col items-center px-[14px] pb-[24px]"
         style={{
-          backgroundImage: `url("${imgBgPattern}")`,
-          backgroundRepeat: "repeat",
-          backgroundSize: "361px",
+          backgroundImage: `url("${imgIntroBg}")`,
+          backgroundPosition: "top center",
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "100% auto",
         }}
-      />
-      <main className="relative flex min-h-[100dvh] w-full max-w-[360px] flex-col justify-center px-[14px] pb-4 pt-[24px]">
-        <WindowPanel>
-          <div className="flex flex-col items-center px-6 pb-5 pt-[30.33px]">
+      >
+        <IntroHeader onHome={onCreateNew} />
+        <div className="flex w-full flex-1 items-center justify-center py-[24px]">
+          <div className="w-full max-w-[331px]">
+            <WindowPanel>
+          <div className="flex flex-col items-center px-6 pb-[27.48px] pt-[30.33px]">
             <p
               className="text-center text-[20px] leading-[1.35] tracking-[0.4px] text-[#32322d]"
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
@@ -3842,7 +3845,7 @@ function CompletePage({
               ))}
               </div>
             </div>
-            <div className="mt-[26.8px]">
+            <div className="mt-[19.58px]">
               <PixelButton
                 onClick={handleCreateNew}
                 variant="secondary"
@@ -3854,8 +3857,40 @@ function CompletePage({
               </PixelButton>
             </div>
           </div>
-        </WindowPanel>
+            </WindowPanel>
+          </div>
+        </div>
       </main>
+
+      <footer className="relative w-full max-w-[397px] shrink-0">
+        <img
+          src={imgIntroFooter}
+          alt="POCHAKFARM footer"
+          className="block w-full"
+          draggable={false}
+        />
+        {[
+          { label: "인스타그램", target: "instagram", href: "https://www.instagram.com/pochakfarm.official/", className: "left-[78.5%] top-[13.9%] h-[14%] w-[6.8%]" },
+          { label: "이메일", target: "email", href: "mailto:somagochi2026@gmail.com", className: "left-[87.8%] top-[13.9%] h-[14%] w-[6.8%]" },
+          { label: "이용약관", target: "terms", href: "https://painted-sunspot-251.notion.site/399209062fbe80b683f0c16882b0357d?pvs=73", className: "left-[7.4%] top-[52.5%] h-[8.5%] w-[12.4%]" },
+          { label: "개인정보처리방침", target: "privacy", href: "https://painted-sunspot-251.notion.site/38f209062fbe8014beb2e6403bbd15e6?pvs=74", className: "left-[25.6%] top-[52.5%] h-[8.5%] w-[23.6%]" },
+          { label: "사전예약 이벤트 규약", target: "event_terms", href: "https://painted-sunspot-251.notion.site/395209062fbe80f4968ee01c8f20e6e8", className: "left-[55.1%] top-[52.5%] h-[8.5%] w-[28.3%]" },
+        ].map((link) => (
+          <a
+            key={link.target}
+            href={link.href}
+            target={link.href.startsWith("mailto:") ? undefined : "_blank"}
+            rel={link.href.startsWith("mailto:") ? undefined : "noopener noreferrer"}
+            aria-label={link.label}
+            className={`absolute cursor-pointer ${link.className}`}
+            onClick={() => {
+              trackEvent("complete_footer_link_clicked", {
+                target: link.target,
+              });
+            }}
+          />
+        ))}
+      </footer>
     </div>
   );
 }
