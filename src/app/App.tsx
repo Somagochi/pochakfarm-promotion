@@ -56,10 +56,6 @@ import imgCornerBLb from "../imports/2200포착-7/4e013676febbb1c8d774637eb5341c
 import imgEdgeBot from "../imports/2200포착-7/1e2ded9ef440b7f889fcfee3c5936e0f36da63c2.png";
 import imgCornerBR from "../imports/2200포착-7/38b961cc3cce7fcaa6c20191eb623633d23043b4.png";
 
-// Sliced card-pack pieces
-import imgCardPackTop from "../assets/ui/card-pack-top.png";
-import imgCardPackBottom from "../assets/ui/card-pack-bottom.png";
-
 // Dog pixel-art SVG component (inline JSX — avoids SVG file import issues)
 import FigmaDog from "../imports/Frame427322333/index";
 
@@ -161,15 +157,8 @@ const ONBOARDING_SLIDES = [
   "/assets/carousel4.png",
 ];
 const LAUNCH_TARGET_TIME = new Date("2026-08-01T00:00:00+09:00").getTime();
-const PROCESSING_ANALYZING_PROMPT_IMAGE =
-  "/assets/processing-analyzing-prompt.png";
-const PROCESSING_SELECTING_PROMPT_IMAGE =
-  "/assets/processing-selecting-prompt.png";
-const CARD_PACK_OPEN_PROMPT_IMAGE = "/assets/card-pack-open-prompt.png";
-const CARD_PACK_CUT_PROMPT_IMAGE = "/assets/card-pack-cut-prompt.png";
 const CARD_GENERATION_FINISHING_PROMPT_IMAGE =
   "/assets/card-generation-finishing-prompt.png";
-const CHOOSE_ONE_PROMPT_IMAGE = "/assets/choose-one-prompt.png";
 const CARD_PACK_FRONT_IMAGE = "/assets/card-pack-front.png";
 const CARD_PACK_BACK_IMAGE = "/assets/card-pack-back.png";
 const SCANNER_LOTTIE = "/assets/scanner.lottie";
@@ -258,8 +247,8 @@ const KEYFRAMES = `
     100%{transform:translate(var(--end-x),-790px) rotate(0deg) scaleY(.9);opacity:1}
   }
   @keyframes packBodyExit {
-    0%,87.54%{translate:0 0}
-    92.53%,100%{translate:0 390px}
+    0%,96%{translate:0 0}
+    100%{translate:0 390px}
   }
   @keyframes cardSkyArrive {
     0%{left:50%;top:50%;transform:translate(-50%,-50%) scale(.01);opacity:0}
@@ -1206,45 +1195,58 @@ function ProcessingPanel({
         WebkitBackdropFilter: "blur(5px)",
       }}
     >
-      <div className="flex h-[640px] w-[330px] max-w-full translate-y-[24px] flex-col items-center">
-        <div className="flex h-[118px] w-full flex-col items-center justify-start pt-[8px]">
+      <div
+        className={`absolute left-1/2 flex h-[640px] w-[330px] max-w-full -translate-x-1/2 flex-col items-center ${
+          loadingStage === "scan" ? "top-[171.81px]" : "top-[174.31px]"
+        }`}
+      >
+        <div className="flex h-[118px] w-full flex-col items-center justify-start">
           <p
-            className="translate-y-[16px] text-center text-[20px] tracking-[2px]"
-            style={{
-              fontFamily: "Galmuri11",
-              fontWeight: 700,
-              color: "transparent",
-              WebkitTextStroke: "1px rgba(255,255,255,0.45)",
-              backgroundImage:
-                "linear-gradient(90deg, rgba(242,235,221,0.42) 0%, #ffffff 42%, rgba(170,235,255,0.95) 50%, #ffffff 58%, rgba(242,235,221,0.42) 100%)",
-              backgroundClip: "text",
-              WebkitBackgroundClip: "text",
-              backgroundSize: "220% 100%",
-              animation: "textShimmer 1.7s linear infinite",
-              textShadow: "0 0 10px rgba(168,238,255,0.45)",
-            }}
+            className={`flex shrink-0 items-center justify-center text-center text-[20px] tracking-[2px] ${
+              loadingStage === "scan"
+                ? "h-[22px] w-[143px] leading-[22px]"
+                : "h-[16.5px] w-[95.44px] leading-[16.5px]"
+            }`}
           >
-            {loadingStage === "scan" ? "ANALYZING..." : "Select..."}
+            <span
+              className="inline-block whitespace-nowrap leading-[22px]"
+              style={{
+                fontFamily: "Galmuri11",
+                fontWeight: 700,
+                color: "transparent",
+                WebkitTextStroke: "1px rgba(255,255,255,0.45)",
+                backgroundImage:
+                  "linear-gradient(90deg, rgba(242,235,221,0.42) 0%, #ffffff 42%, rgba(170,235,255,0.95) 50%, #ffffff 58%, rgba(242,235,221,0.42) 100%)",
+                backgroundClip: "text",
+                WebkitBackgroundClip: "text",
+                backgroundSize: "220% 100%",
+                animation: "textShimmer 1.7s linear infinite",
+                textShadow: "0 0 10px rgba(168,238,255,0.45)",
+              }}
+            >
+              {loadingStage === "scan" ? "ANALYZING..." : "Select..."}
+            </span>
           </p>
-          <img
-            src={
-              loadingStage === "scan"
-                ? PROCESSING_ANALYZING_PROMPT_IMAGE
-                : PROCESSING_SELECTING_PROMPT_IMAGE
-            }
-            alt={
-              loadingStage === "scan"
-                ? "사진 속 동물을 분석하고 있어요"
-                : "적합한 카드팩을 선정하고 있어요"
-            }
-            className="mt-[8px] h-auto w-[270px] max-w-full object-contain"
-            draggable={false}
-          />
+          {loadingStage === "scan" ? (
+            <img
+              src="/assets/processing-analyzing-text.png"
+              alt="사진 속 동물을 분석하고 있어요"
+              className="mt-[15.57px] block h-[18px] w-[180px] shrink-0 object-contain"
+              draggable={false}
+            />
+          ) : (
+            <img
+              src="/assets/processing-selecting-text.png"
+              alt="적합한 카드팩을 선정하고 있어요"
+              className="mt-[18.56px] block h-[18px] w-[189px] shrink-0 object-contain"
+              draggable={false}
+            />
+          )}
         </div>
 
         <div className="relative flex h-[360px] w-[min(100vw,397px)] max-w-none items-center justify-center overflow-hidden">
           {loadingStage === "scan" ? (
-            <div className="relative h-[220px] w-[220px] overflow-visible">
+            <div className="relative h-[220px] w-[220px] -translate-y-[41.45px] overflow-visible">
               <div className="absolute inset-0 z-0 overflow-hidden rounded-[8px]">
                 {uploadedImage && (
                   <img
@@ -1289,7 +1291,7 @@ function ProcessingPanel({
                 <img
                   src={uploadedImage}
                   alt=""
-                  className="absolute left-1/2 top-[26px] z-10 h-[176px] w-[176px] -translate-x-1/2 rounded-[8px] object-cover"
+                  className="absolute left-1/2 top-[26.04px] z-10 h-[176px] w-[176px] -translate-x-1/2 rounded-[8px] object-cover"
                   draggable={false}
                 />
               )}
@@ -1419,38 +1421,46 @@ function CardPackPanel({
         WebkitBackdropFilter: "blur(5px)",
       }}
     >
-      <div className="flex h-[640px] w-[330px] max-w-full translate-y-[24px] flex-col items-center">
-        <div className="flex h-[118px] w-full flex-col items-center justify-start pt-[2px]">
+      <div className="absolute left-1/2 top-[174.31px] flex h-[640px] w-[330px] max-w-full -translate-x-1/2 flex-col items-center">
+        <div className="flex h-[118px] w-full flex-col items-center justify-start">
           <p
-            className="translate-y-[16px] text-center text-[34px] leading-none tracking-[1.2px]"
-            style={{
-              fontFamily: "Galmuri11",
-              fontWeight: 700,
-              color: "transparent",
-              WebkitTextStroke: "1px rgba(255,255,255,0.65)",
-              backgroundImage:
-                "linear-gradient(90deg, rgba(255,255,255,0.45) 0%, #ffffff 42%, rgba(170,235,255,0.95) 50%, #ffffff 58%, rgba(255,255,255,0.45) 100%)",
-              backgroundClip: "text",
-              WebkitBackgroundClip: "text",
-              backgroundSize: "220% 100%",
-              animation: "textShimmer 1.7s linear infinite",
-              textShadow: "0 0 10px rgba(168,238,255,0.55)",
-            }}
+            className={`flex shrink-0 items-center justify-center whitespace-nowrap text-center text-[20px] tracking-[1.2px] ${
+              stage === "ready"
+                ? "h-[19.5px] w-[187.24px] leading-[19.5px]"
+                : "h-[22px] w-[231px] leading-[22px]"
+            }`}
           >
-            Card Pack Ready
+            <span
+              className="inline-block whitespace-nowrap"
+              style={{
+                fontFamily: "Galmuri11",
+                fontWeight: 700,
+                color: "transparent",
+                WebkitTextStroke: "1px rgba(255,255,255,0.65)",
+                backgroundImage:
+                  "linear-gradient(90deg, rgba(255,255,255,0.45) 0%, #ffffff 42%, rgba(170,235,255,0.95) 50%, #ffffff 58%, rgba(255,255,255,0.45) 100%)",
+                backgroundClip: "text",
+                WebkitBackgroundClip: "text",
+                backgroundSize: "220% 100%",
+                animation: "textShimmer 1.7s linear infinite",
+                textShadow: "0 0 10px rgba(168,238,255,0.55)",
+              }}
+            >
+              {stage === "ready" ? "Card Pack Ready" : "Cut Your Card Pack!"}
+            </span>
           </p>
           {stage === "ready" ? (
             <img
-              src={CARD_PACK_OPEN_PROMPT_IMAGE}
+              src="/assets/card-pack-open-text.png"
               alt="완성된 카드팩을 클릭해 열어보세요"
-              className="mt-[8px] h-auto w-[270px] max-w-full object-contain"
+              className="mt-[15.56px] block h-[18px] w-[201px] shrink-0 object-contain"
               draggable={false}
             />
           ) : (
             <img
-              src={CARD_PACK_CUT_PROMPT_IMAGE}
+              src="/assets/card-pack-cut-text.png"
               alt="절취선을 잘라보세요"
-              className="mt-[8px] h-auto w-[180px] max-w-full object-contain"
+              className="mt-[15.56px] block h-[18px] w-[118px] shrink-0 object-contain"
               draggable={false}
             />
           )}
@@ -1463,7 +1473,7 @@ function CardPackPanel({
                 trackEvent("card_pack_cut_ready");
                 setStage("cut");
               }}
-              className="block cursor-pointer focus:outline-none"
+              className="block translate-y-[17.36px] cursor-pointer focus:outline-none"
               aria-label="카드팩 자르기 시작"
             >
               <ReadyCardPack />
@@ -1480,7 +1490,7 @@ function CardPackPanel({
 function ReadyCardPack() {
   return (
     <div
-      className="relative h-[280px] w-[208px]"
+      className="relative h-[282.66px] w-[210.06px]"
       style={{
         filter: "drop-shadow(0 18px 28px rgba(0,0,0,0.45))",
         animation: "packReadyMotion 10s linear infinite",
@@ -1512,7 +1522,7 @@ function CuttableCardPack({ onCut }: { onCut: () => void }) {
 
   return (
     <div
-      className="relative h-[280px] w-[208px] touch-none select-none"
+      className="relative h-[420.1px] w-[312.21px] translate-y-[125.51px] touch-none select-none"
       aria-label="카드팩 절취선 드래그 영역"
       style={{
         userSelect: "none",
@@ -1523,7 +1533,7 @@ function CuttableCardPack({ onCut }: { onCut: () => void }) {
       onDragStart={(event) => event.preventDefault()}
     >
       <img
-        src={CARD_PACK_FRONT_IMAGE}
+        src="/assets/card-pack-ready.png"
         alt=""
         className="pointer-events-none h-full w-full select-none object-contain drop-shadow-2xl"
         draggable={false}
@@ -1531,7 +1541,7 @@ function CuttableCardPack({ onCut }: { onCut: () => void }) {
       />
       <div
         ref={trackRef}
-        className="absolute left-[7%] right-[7%] top-[15.5%] h-[42px] cursor-ew-resize touch-none"
+        className="absolute left-[7%] right-[7%] top-[36.96px] h-[42px] cursor-ew-resize touch-none"
         style={{
           touchAction: "none",
           userSelect: "none",
@@ -1625,11 +1635,11 @@ function PackOpeningOverlay({ characterName, assets, isReady, onStartPolling, on
     >
       <div className="pointer-events-none absolute inset-0 opacity-50" style={{ background: "radial-gradient(ellipse 70% 50% at 50% 55%, rgba(98,141,56,.45), transparent 70%)" }} />
       {openingScene === "pack" ? (
-        <div className="relative flex h-[560px] w-[330px] translate-y-[24px] items-center justify-center" aria-label="카드팩 개봉 중">
+        <div className="absolute inset-0" aria-label="카드팩 개봉 중">
           {particles.map((particle, index) => (
             <span
               key={index}
-              className="absolute left-1/2 top-[47%] z-30 block h-[7px] w-[7px]"
+              className="absolute left-1/2 top-[445.73px] z-30 block h-[7px] w-[7px]"
               style={{
                 clipPath: index % 2 ? "polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%)" : undefined,
                 borderRadius: index % 2 ? undefined : "50%",
@@ -1641,52 +1651,62 @@ function PackOpeningOverlay({ characterName, assets, isReady, onStartPolling, on
             />
           ))}
 
-          {cardLaunches.map(([delay, startX, bumpX, endX, rotation], index) => (
-            <div
-              key={delay}
-              className="absolute left-1/2 top-[205px] w-[150px] -translate-x-1/2"
-              style={{ zIndex: 10 + index }}
-            >
-              <img
-                src={assets.cardBackImage}
-                alt=""
-                draggable={false}
-                className="block w-full rounded-[8px] opacity-0 drop-shadow-2xl"
-                style={{
-                  animation: `revealCardLaunch 800ms cubic-bezier(.5,0,.5,1) ${delay}ms 1 both`,
-                  "--start-x": startX,
-                  "--bump-x": bumpX,
-                  "--end-x": endX,
-                  "--start-r": rotation,
-                } as React.CSSProperties}
-              />
-            </div>
-          ))}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[445.73px] overflow-hidden">
+            {cardLaunches.map(([delay, startX, bumpX, endX, rotation], index) => (
+              <div
+                key={delay}
+                className="absolute left-1/2 top-[472.77px] w-[210px] -translate-x-1/2"
+                style={{ zIndex: 10 + index }}
+              >
+                <img
+                  src={assets.cardBackImage}
+                  alt=""
+                  draggable={false}
+                  className="block w-full rounded-[8px] opacity-0 drop-shadow-2xl"
+                  style={{
+                    animation: `revealCardLaunch 800ms cubic-bezier(.5,0,.5,1) ${delay}ms 1 both`,
+                    "--start-x": startX,
+                    "--bump-x": bumpX,
+                    "--end-x": endX,
+                    "--start-r": rotation,
+                  } as React.CSSProperties}
+                />
+              </div>
+            ))}
+          </div>
 
-          <div className="absolute left-1/2 top-[120px] z-20 h-[420px] w-[310px] -translate-x-1/2">
+          <div className="absolute left-1/2 top-[387.77px] z-20 h-[420.1px] w-[312.21px] -translate-x-1/2">
             <div
               className="relative h-full w-full"
               style={{ animation: "packBodyExit 8s cubic-bezier(.5,0,.5,1) 1 both" }}
             >
-              <img
-                src={imgCardPackBottom}
-                alt=""
-                draggable={false}
-                className="absolute left-1/2 top-[87px] w-[310px] -translate-x-1/2 drop-shadow-2xl"
-              />
-              <div className="absolute top-0 w-[310px] -translate-x-1/2" style={{ left: "calc(50% + 16px)" }}>
+              <div className="absolute left-0 top-[57.96px] h-[362.14px] w-full overflow-hidden drop-shadow-2xl">
                 <img
-                  src={imgCardPackTop}
+                  src="/assets/card-pack-ready.png"
                   alt=""
                   draggable={false}
-                  className="block w-full drop-shadow-2xl"
-                  style={{ transformOrigin: "92.9% 95.4%", animation: "packTopTear 8s cubic-bezier(.5,0,.5,1) 1 both" }}
+                  className="absolute left-0 top-[-57.96px] block h-[420.1px] w-[312.21px] max-w-none"
+                />
+              </div>
+              <div
+                className="absolute left-0 top-0 h-[57.96px] w-full overflow-hidden drop-shadow-2xl"
+                style={{
+                  transformOrigin: "92.9% 95.4%",
+                  animation:
+                    "packTopTear 8s cubic-bezier(.5,0,.5,1) 1 both",
+                }}
+              >
+                <img
+                  src="/assets/card-pack-ready.png"
+                  alt=""
+                  draggable={false}
+                  className="absolute left-0 top-0 block h-[420.1px] w-[312.21px] max-w-none"
                 />
               </div>
               {Array.from({ length: 11 }, (_, index) => (
                 <span
                   key={`seam-sparkle-${index}`}
-                  className="pointer-events-none absolute top-[87px] z-30 h-[10px] w-[10px] bg-white"
+                  className="pointer-events-none absolute top-[57.96px] z-30 h-[10px] w-[10px] bg-white"
                   style={{
                     left: `${8 + index * 8.4}%`,
                     clipPath: "polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%)",
@@ -1753,39 +1773,21 @@ function CardSkyScene({
   onSelect: (cardIndex: number) => void;
 }) {
   const [canSelect, setCanSelect] = useState(false);
-  const chooseTitleRef = useRef<HTMLParagraphElement>(null);
   const choosePromptRef = useRef<HTMLImageElement>(null);
   const firstCardRef = useRef<HTMLButtonElement>(null);
   const cardFieldRef = useRef<HTMLDivElement>(null);
-  const [choosePromptWidth, setChoosePromptWidth] = useState<number | null>(null);
   const [cardFieldOffsetY, setCardFieldOffsetY] = useState(0);
   const cards = [
-    { delay: 0, x: "17.82%", y: "50%" },
+    { delay: 0, x: "calc(50% - 111.06px)", y: "50%" },
     { delay: 1367, x: "50%", y: "50%" },
-    { delay: 2800, x: "82.18%", y: "50%" },
-    { delay: 4133, x: "33.75%", y: "81.62%" },
-    { delay: 5467, x: "65.63%", y: "81.62%" },
+    { delay: 2800, x: "calc(50% + 111.06px)", y: "50%" },
+    { delay: 4133, x: "calc(50% - 55.53px)", y: "calc(50% + 143.66px)" },
+    { delay: 5467, x: "calc(50% + 55.53px)", y: "calc(50% + 143.66px)" },
   ];
 
   useEffect(() => {
     const timer = window.setTimeout(() => setCanSelect(true), 7200);
     return () => window.clearTimeout(timer);
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!chooseTitleRef.current) return;
-
-    const title = chooseTitleRef.current;
-    const updatePromptWidth = () => {
-      setChoosePromptWidth(title.getBoundingClientRect().width + 24);
-    };
-    const observer = new ResizeObserver(updatePromptWidth);
-
-    updatePromptWidth();
-    observer.observe(title);
-    document.fonts?.ready.then(updatePromptWidth);
-
-    return () => observer.disconnect();
   }, []);
 
   useLayoutEffect(() => {
@@ -1817,45 +1819,45 @@ function CardSkyScene({
       observer.disconnect();
       window.removeEventListener("resize", updateCardOffset);
     };
-  }, [cardFieldOffsetY, choosePromptWidth]);
+  }, [cardFieldOffsetY]);
 
   return (
     <div
-      className="flex h-[640px] w-[330px] max-w-[92vw] translate-y-[24px] flex-col items-center"
+      className="absolute left-1/2 top-[174.81px] flex h-[640px] w-[330px] max-w-[92vw] -translate-x-1/2 flex-col items-center"
       aria-label={canSelect ? "카드 한 장을 선택하세요" : "카드가 하늘에 펼쳐지는 중"}
     >
-      <div className="flex h-[118px] w-full flex-col items-center justify-start pt-[8px]">
+      <div className="flex h-[118px] w-full flex-col items-center justify-start">
         <div
           className="flex flex-col items-center"
           style={{ visibility: canSelect ? "visible" : "hidden" }}
         >
             <p
-              ref={chooseTitleRef}
-              className="translate-y-[16px] text-center text-[22px] tracking-[2px]"
-              style={{
-                fontFamily: "Galmuri11",
-                fontWeight: 700,
-                color: "transparent",
-                WebkitTextStroke: "1px rgba(255,255,255,0.45)",
-                backgroundImage:
-                  "linear-gradient(90deg, rgba(242,235,221,0.42) 0%, #ffffff 42%, rgba(170,235,255,0.95) 50%, #ffffff 58%, rgba(242,235,221,0.42) 100%)",
-                backgroundClip: "text",
-                WebkitBackgroundClip: "text",
-                backgroundSize: "220% 100%",
-                animation: "textShimmer 1.7s linear infinite",
-                textShadow: "0 0 10px rgba(168,238,255,0.45)",
-              }}
+              className="flex h-[22px] w-[140px] shrink-0 items-center justify-center whitespace-nowrap text-center text-[18px] leading-[120%] tracking-[1.8px]"
             >
-              Choose One!
+              <span
+                className="inline-block whitespace-nowrap leading-[120%]"
+                style={{
+                  fontFamily: "Galmuri11",
+                  fontWeight: 700,
+                  color: "transparent",
+                  WebkitTextStroke: "1px rgba(255,255,255,0.45)",
+                  backgroundImage:
+                    "linear-gradient(90deg, rgba(242,235,221,0.42) 0%, #ffffff 42%, rgba(170,235,255,0.95) 50%, #ffffff 58%, rgba(242,235,221,0.42) 100%)",
+                  backgroundClip: "text",
+                  WebkitBackgroundClip: "text",
+                  backgroundSize: "220% 100%",
+                  animation: "textShimmer 1.7s linear infinite",
+                  textShadow: "0 0 10px rgba(168,238,255,0.45)",
+                }}
+              >
+                Choose One!
+              </span>
             </p>
             <img
               ref={choosePromptRef}
-              src={CHOOSE_ONE_PROMPT_IMAGE}
+              src="/assets/choose-one-text.png"
               alt="하나를 선택해 보세요"
-              className="mt-[8px] h-auto max-w-full object-contain"
-              style={{
-                width: choosePromptWidth === null ? 0 : `${choosePromptWidth}px`,
-              }}
+              className="mt-[15.56px] block h-[18px] w-[122px] shrink-0 object-contain"
               draggable={false}
             />
         </div>
@@ -1863,7 +1865,7 @@ function CardSkyScene({
 
       <div
         ref={cardFieldRef}
-        className="relative h-[464px] w-full overflow-hidden"
+        className="relative h-[464px] w-[min(100vw,397px)] max-w-none overflow-hidden"
         style={{ transform: `translateY(${cardFieldOffsetY}px)` }}
       >
         <div
@@ -1878,7 +1880,7 @@ function CardSkyScene({
             disabled={!canSelect}
             aria-label={`${index + 1}번 카드 선택`}
             onClick={() => onSelect(index)}
-            className={`group absolute w-[27.83%] border-0 bg-transparent p-0 opacity-0 outline-none ${
+            className={`group absolute h-[127.32px] w-[90.38px] border-0 bg-transparent p-0 opacity-0 outline-none ${
               canSelect ? "cursor-pointer" : "cursor-default"
             }`}
             style={{
@@ -1889,7 +1891,7 @@ function CardSkyScene({
             } as React.CSSProperties}
           >
             <div
-              className="w-full will-change-transform"
+              className="h-full w-full will-change-transform"
               style={{
                 animation: `cardSkySpin 1200ms cubic-bezier(.22,.61,.36,1) ${card.delay}ms 1 both`,
               }}
@@ -1898,7 +1900,7 @@ function CardSkyScene({
                 src={cardBackImage}
                 alt=""
                 draggable={false}
-                className={`block w-full select-none rounded-[8px] transition-[transform,filter] duration-200 ease-out ${
+                className={`block h-full w-full select-none rounded-[8px] object-fill transition-[transform,filter] duration-200 ease-out ${
                   canSelect
                     ? "group-hover:-translate-y-2 group-hover:scale-110 group-hover:brightness-110 group-hover:drop-shadow-[0_0_20px_rgba(255,220,80,.95)] group-focus-visible:-translate-y-2 group-focus-visible:scale-110 group-focus-visible:brightness-110 group-focus-visible:drop-shadow-[0_0_20px_rgba(255,220,80,.95)] group-active:scale-105"
                     : ""
@@ -2572,7 +2574,7 @@ function ClassicV2Version() {
         <img
           src={imgIntroTryTitle}
           alt=""
-          className="mt-[50.4px] block h-[33.43px] w-[206.59px] shrink-0"
+          className="mt-[37px] block h-[33.43px] w-[206.59px] shrink-0"
           draggable={false}
         />
         <img
@@ -2758,7 +2760,7 @@ function ClassicV2Version() {
                 }}
                 maxLength={6}
                 placeholder="이름을 작성해주세요"
-                className="mt-[22px] h-[56px] w-[250px] rounded-[12px] bg-white px-4 text-[15px] tracking-[0.4px] text-[#32322d] placeholder:text-[14px] placeholder:tracking-[0.2px] placeholder:text-[#c9c2b4] focus:outline-none focus:ring-2 focus:ring-[#628d38]"
+                className="mt-[19.09px] h-[56px] w-[250px] rounded-[12px] bg-white px-4 text-[15px] tracking-[0.4px] text-[#32322d] placeholder:text-[14px] placeholder:tracking-[0.2px] placeholder:text-[#c9c2b4] focus:outline-none focus:ring-2 focus:ring-[#628d38]"
                 style={{
                   fontFamily:
                     '"Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif',
@@ -2776,7 +2778,7 @@ function ClassicV2Version() {
                 {nameError}
               </p>
 
-              <div className="mt-[16px]">
+              <div className="mt-[9.7px]">
                 <PixelButton
                   onClick={handleConvert}
                   disabled={!isButtonActive}
@@ -3475,15 +3477,15 @@ function CTAPage({
                 <br />
                 농장에 입주시킬 수 있어요
               </p>
-              <p
-                className="mt-[20.4px] text-[10px] tracking-[0.4px] text-[#6a6a61]"
-                style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
-              >
-                사전등록하면 출시 소식과 보상을 알려드려요
-              </p>
+              <img
+                src="/assets/cta-open-notice-text.png"
+                alt="앱이 오픈되면 문자로 알려드릴게요"
+                className="mt-[20.4px] block h-[10px] w-[156px] shrink-0 object-contain"
+                draggable={false}
+              />
             </div>
 
-            <div className="relative h-[220px] w-[204px]">
+            <div className="relative mt-[14.51px] h-[220px] w-[204px]">
               {cardImage ? (
                 <>
                   <div className="absolute right-[10px] top-[6px] h-[206.02px] w-[143.05px] rotate-[9deg] overflow-hidden rounded-[7px]">
