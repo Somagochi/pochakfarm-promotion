@@ -50,11 +50,10 @@ export async function createPreRegistration(body, env = process.env, options = {
 
   const payload = await readResponseJson(response);
   if (!response.ok) {
-    const message =
-      response.status >= 500
+    const message = isDuplicatePreRegistration(response.status, payload)
+      ? "이미 사전 예약이 등록된 번호입니다."
+      : response.status >= 500
         ? "서버 에러"
-        : isDuplicatePreRegistration(response.status, payload)
-        ? "이미 사전예약이 등록된 번호입니다."
         : payload.message || payload.error || "사전예약 등록에 실패했어요.";
     throw httpError(response.status, message, payload);
   }

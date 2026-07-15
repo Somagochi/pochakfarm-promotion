@@ -40,6 +40,9 @@ import imgModalWindowBottom from "../assets/ui/modal-window-bottom.png";
 import imgModalWindowMiddle from "../assets/ui/modal-window-middle.png";
 import imgModalWindowTop from "../assets/ui/modal-window-top.png";
 import imgCutScissors from "../assets/ui/cut-scissors.png";
+import imgRequiredPrivacyConsent from "../assets/ui/required-privacy-consent.png";
+import imgPrivacyRetentionNotice from "../assets/ui/privacy-retention-notice.png";
+import imgRegistrationModalHeading from "../assets/ui/registration-modal-heading.png";
 
 // ── Assets ───────────────────────────────────────────────────
 // Window frame & background
@@ -1045,6 +1048,9 @@ function OnboardingCarousel({
   const scrollRafRef = useRef<number>();
   const autoPlayTimerRef = useRef<number>();
   const programmaticSlideRef = useRef<number | null>(null);
+  const carouselDraggingRef = useRef(false);
+  const carouselDragStartXRef = useRef(0);
+  const carouselDragStartScrollRef = useRef(0);
 
   const restartAutoPlay = useCallback(() => {
     if (autoPlayTimerRef.current) {
@@ -1070,7 +1076,7 @@ function OnboardingCarousel({
 
   useEffect(() => {
     const scroller = scrollerRef.current;
-    if (!scroller) return;
+    if (!scroller || carouselDraggingRef.current) return;
 
     programmaticSlideRef.current = activeSlide;
     scroller.scrollTo({
@@ -1121,11 +1127,32 @@ function OnboardingCarousel({
       <div
         ref={scrollerRef}
         onScroll={handleScroll}
-        onPointerDown={() => {
+        onPointerDown={(event) => {
           programmaticSlideRef.current = null;
           restartAutoPlay();
+          if (event.pointerType !== "mouse" || event.button !== 0) return;
+
+          carouselDraggingRef.current = true;
+          carouselDragStartXRef.current = event.clientX;
+          carouselDragStartScrollRef.current = event.currentTarget.scrollLeft;
+          event.currentTarget.setPointerCapture(event.pointerId);
         }}
-        className={`${className} mx-auto flex h-[291px] w-[300px] snap-x snap-mandatory overflow-x-auto scroll-smooth`}
+        onPointerMove={(event) => {
+          if (!carouselDraggingRef.current) return;
+          event.preventDefault();
+          event.currentTarget.scrollLeft =
+            carouselDragStartScrollRef.current -
+            (event.clientX - carouselDragStartXRef.current);
+        }}
+        onPointerUp={(event) => {
+          if (!carouselDraggingRef.current) return;
+          carouselDraggingRef.current = false;
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }}
+        onPointerCancel={() => {
+          carouselDraggingRef.current = false;
+        }}
+        className={`${className} mx-auto flex h-[291px] w-[300px] cursor-grab snap-x snap-mandatory overflow-x-auto scroll-smooth active:cursor-grabbing`}
         style={{
           scrollbarWidth: "none",
           WebkitOverflowScrolling: "touch",
@@ -1244,7 +1271,9 @@ function ProcessingPanel({
           )}
         </div>
 
-        <div className="relative flex h-[360px] w-[min(100vw,397px)] max-w-none items-center justify-center overflow-hidden">
+        <div
+          className="relative flex h-[360px] w-[min(100vw,397px)] max-w-none items-center justify-center overflow-hidden"
+        >
           {loadingStage === "scan" ? (
             <div className="relative h-[220px] w-[220px] -translate-y-[41.45px] overflow-visible">
               <div className="absolute inset-0 z-0 overflow-hidden rounded-[8px]">
@@ -1794,16 +1823,20 @@ function CardSkyScene({
     if (!choosePromptRef.current || !firstCardRef.current || !cardFieldRef.current) return;
 
     const updateCardOffset = () => {
-      const promptBottom = choosePromptRef.current?.getBoundingClientRect().bottom;
+      const promptRect = choosePromptRef.current?.getBoundingClientRect();
       const cardField = cardFieldRef.current;
       const firstCard = firstCardRef.current;
-      if (promptBottom === undefined || !cardField || !firstCard) return;
+      if (!promptRect || !cardField || !firstCard) return;
+
+      const promptTextBottom =
+        promptRect.top +
+        promptRect.height * CHOOSE_ONE_PROMPT_TEXT_BOTTOM_RATIO;
 
       const unshiftedFieldTop =
         cardField.getBoundingClientRect().top - cardFieldOffsetY;
       const firstCardTop =
         unshiftedFieldTop + cardField.offsetHeight * 0.5 - firstCard.offsetHeight * 0.5;
-      const nextOffset = 89.86 - (firstCardTop - promptBottom);
+      const nextOffset = 89.86 - (firstCardTop - promptTextBottom);
       if (Math.abs(nextOffset - cardFieldOffsetY) < 0.1) return;
       setCardFieldOffsetY(nextOffset);
     };
@@ -2760,11 +2793,9 @@ function ClassicV2Version() {
                 }}
                 maxLength={6}
                 placeholder="이름을 작성해주세요"
-                className="mt-[19.09px] h-[56px] w-[250px] rounded-[12px] bg-white px-4 text-[15px] tracking-[0.4px] text-[#32322d] placeholder:text-[14px] placeholder:tracking-[0.2px] placeholder:text-[#c9c2b4] focus:outline-none focus:ring-2 focus:ring-[#628d38]"
+                className="character-name-input mt-[22px] h-[56px] w-[250px] rounded-[12px] bg-white px-4 text-[15px] tracking-[0.4px] text-[#32322d] placeholder:text-[14px] placeholder:leading-[1.3] placeholder:tracking-[0.2px] placeholder:text-[#c9c2b4] focus:outline-none focus:ring-2 focus:ring-[#628d38]"
                 style={{
-                  fontFamily:
-                    '"Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif',
-                  fontWeight: 400,
+                  fontWeight: 300,
                   border: "1px solid #e5dece",
                   boxShadow: "0 2px 6px rgba(104,85,62,0.06)",
                 }}
@@ -3024,7 +3055,6 @@ function EarlyRegistrationDialog({
         : `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
   const canSubmit = digits.length === 11 && required;
   const canBypassRegistration =
-    import.meta.env.DEV ||
     new URLSearchParams(window.location.search).get("preview") === "1";
 
   useEffect(() => {
@@ -3162,21 +3192,20 @@ function EarlyRegistrationDialog({
           >
             x
           </button>
-          <h2
-            className="text-[19px] leading-[1.4] tracking-[0.3px] text-[#36501e]"
-            style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
-          >
-            {view === "terms" ? "개인정보 수집 및 이용 동의" : "얼리 농장주 등록"}
-          </h2>
-          {view === "form" && (
-            <p
-              className="mt-[12px] text-[13px] leading-[1.35] tracking-[0.1px] text-[#68553e]"
-              style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
+          {view === "terms" ? (
+            <h2
+              className="text-[19px] leading-[1.4] tracking-[0.3px] text-[#36501e]"
+              style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
             >
-              앱이 출시되면 문자로 알려드려요
-              <br />
-              사전예약자에게는 한정 보상을 드려요
-            </p>
+              개인정보 수집 및 이용 동의
+            </h2>
+          ) : (
+            <img
+              src={imgRegistrationModalHeading}
+              alt="1기 포착팜 등록. 앱이 출시되면 문자를 통해 앱 링크와 보상 쿠폰번호를 보내드려요!"
+              className="h-auto w-[270px] max-w-full object-contain"
+              draggable={false}
+            />
           )}
         </div>
 
@@ -3232,32 +3261,30 @@ function EarlyRegistrationDialog({
                 >
                   {required ? "✓" : ""}
                 </span>
-                <span
-                  className="min-w-0 text-[9px] tracking-[0.1px] text-[#45372a]"
-                  style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
-                >
-                  <span className="text-[#628d38]">[필수]</span> 개인정보 수집 및 이용 동의
-                </span>
+                <img
+                  src={imgRequiredPrivacyConsent}
+                  alt="[필수] 개인정보 수집 및 이용 동의"
+                  className="h-auto w-[150px] max-w-full object-contain"
+                  draggable={false}
+                />
               </button>
               <button
                 type="button"
                 onClick={() => {
                   setView("terms");
                 }}
-                className="ml-[9px] shrink-0 text-[10px] tracking-[0.2px] text-[#628d38] underline-offset-2"
+                className="ml-[9px] shrink-0 cursor-pointer text-[10px] tracking-[0.2px] text-[#628d38] underline-offset-2"
                 style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
               >
                 보기
               </button>
               </div>
-              <p
-                className="mt-[10px] text-[8px] leading-[1.55] tracking-[0.05px] text-[#8f7755]"
-                style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
-              >
-                휴대폰 번호는 앱 출시 안내 및 사전예약 보상 쿠폰 발송 목적으로만
-                <br />
-                사용되며, 사전예약 이벤트 종료 후 1개월 뒤 삭제됩니다.
-              </p>
+              <img
+                src={imgPrivacyRetentionNotice}
+                alt="휴대폰 번호는 앱 출시 안내 및 사전예약 보상 쿠폰 발송 목적으로만 사용되며, 사전예약 이벤트 종료 후 1개월 뒤 삭제됩니다."
+                className="mt-[10px] h-auto w-full object-contain"
+                draggable={false}
+              />
             </div>
 
             <div className="mt-[27px] flex justify-center">
