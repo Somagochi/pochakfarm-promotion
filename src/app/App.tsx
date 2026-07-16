@@ -236,11 +236,23 @@ const KEYFRAMES = `
     35%{transform:translate(-50%,-50%) rotate(45deg) scale(1);opacity:1}
     100%{transform:translate(-50%,-50%) rotate(90deg) scale(0);opacity:0}
   }
-  @keyframes burstParticle {
-    0%{transform:translate(0,0) scale(0);opacity:0}
-    10%{transform:translate(var(--burst-x),var(--burst-y)) scale(1);opacity:1}
-    15%{transform:translate(var(--burst-x),var(--burst-y)) scale(1);opacity:1}
-    25%,100%{transform:translate(var(--burst-x2),var(--burst-y2)) scale(0);opacity:0}
+  @keyframes figmaSparklePop {
+    0%{transform:scale(0);animation-timing-function:cubic-bezier(.7,-.4,.4,1.4)}
+    10%{transform:scale(1)}
+    15%{transform:scale(1);animation-timing-function:cubic-bezier(.7,-.4,.4,1.4)}
+    25%,100%{transform:scale(0)}
+  }
+  @keyframes figmaSparklePopFlipped {
+    0%{transform:scale(0,0);animation-timing-function:cubic-bezier(.7,-.4,.4,1.4)}
+    10%{transform:scale(1,-1)}
+    15%{transform:scale(1,-1);animation-timing-function:cubic-bezier(.7,-.4,.4,1.4)}
+    25%,100%{transform:scale(0,0)}
+  }
+  @keyframes figmaSeamTrace {
+    0%{stroke-dasharray:0 1;stroke-dashoffset:0}
+    3.699%{stroke-dasharray:.6 1;stroke-dashoffset:0}
+    6.173%{stroke-dasharray:1 1;stroke-dashoffset:0}
+    9.949%,100%{stroke-dasharray:0 1;stroke-dashoffset:-1}
   }
   @keyframes revealCardLaunch {
     0%{transform:translate(var(--start-x),35px) rotate(var(--start-r)) scale(1);opacity:1}
@@ -1646,14 +1658,20 @@ function PackOpeningOverlay({ characterName, assets, isReady, onStartPolling, on
     onStartPolling();
   }, [isReady, onStartPolling, openingScene]);
 
-  const particles = Array.from({ length: 36 }, (_, index) => {
-    const angle = (index / 36) * Math.PI * 2;
+  // Figma nodes 6570:397–573 and 6570:585–761: 34 sparkle layers.
+  const sparkleFlips = [
+    false, true, true, false, true, true, true, true, true,
+    true, true, false, false, false, false, false, true, true,
+    false, false, true, false, false, false, false, false, false,
+    false, true, true, true, true, true, false,
+  ];
+  const particles = sparkleFlips.map((flipped, index) => {
+    const angle = (index / sparkleFlips.length) * Math.PI * 2;
     const distance = 72 + (index % 5) * 12;
     return {
       x: Math.cos(angle) * distance,
       y: Math.sin(angle) * distance,
-      x2: Math.cos(angle) * (distance + 20),
-      y2: Math.sin(angle) * (distance + 20),
+      flipped,
     };
   });
   const cardLaunches = [
@@ -1677,15 +1695,40 @@ function PackOpeningOverlay({ characterName, assets, isReady, onStartPolling, on
               key={index}
               className="absolute left-1/2 top-[445.73px] z-30 block h-[7px] w-[7px]"
               style={{
-                clipPath: index % 2 ? "polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%)" : undefined,
-                borderRadius: index % 2 ? undefined : "50%",
-                background: index % 4 === 0 ? "#9fe1ff" : index % 4 === 1 ? "#f6f0c9" : "#fff",
-                animation: "burstParticle 8s cubic-bezier(.5,0,.5,1) 1 both",
-                "--burst-x": `${particle.x}px`, "--burst-y": `${particle.y}px`,
-                "--burst-x2": `${particle.x2}px`, "--burst-y2": `${particle.y2}px`,
+                transform: `translate(${particle.x}px,${particle.y}px)`,
               } as React.CSSProperties}
-            />
+            >
+              <span
+                className="block h-full w-full"
+                style={{
+                  clipPath: index % 2 ? "polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%)" : undefined,
+                  borderRadius: index % 2 ? undefined : "50%",
+                  background: index % 4 === 0 ? "#9fe1ff" : index % 4 === 1 ? "#f6f0c9" : "#fff",
+                  filter: "drop-shadow(0 0 5px currentColor)",
+                  animation: `${particle.flipped ? "figmaSparklePopFlipped" : "figmaSparklePop"} 8s linear 1 both`,
+                }}
+              />
+            </span>
           ))}
+
+          <svg
+            className="pointer-events-none absolute left-1/2 top-[441px] z-30 h-[18px] w-[286px] -translate-x-1/2 overflow-visible"
+            viewBox="0 0 286 18"
+            aria-hidden="true"
+          >
+            <path
+              d="M0 9 H286"
+              pathLength="1"
+              fill="none"
+              stroke="#dff7ff"
+              strokeWidth="3"
+              strokeLinecap="round"
+              style={{
+                animation: "figmaSeamTrace 8s linear 1 both",
+                filter: "drop-shadow(0 0 6px #9fe1ff)",
+              }}
+            />
+          </svg>
 
           <div className="pointer-events-none absolute inset-x-0 top-0 h-[445.73px] overflow-hidden">
             {cardLaunches.map(([delay, startX, bumpX, endX, rotation], index) => (
