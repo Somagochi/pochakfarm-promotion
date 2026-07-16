@@ -30,6 +30,7 @@ import imgIntroLimitedText from "../assets/ui/intro-limited-text.png";
 import imgIntroRewardText from "../assets/ui/intro-reward-text.png";
 import imgIntroImageGuideButton from "../assets/ui/intro-image-guide-button.png";
 import imgImageGuideModal from "../assets/ui/image-guide-modal.png";
+import imgIntroPreregistrationRewards from "../assets/ui/intro-preregistration-rewards.png";
 import imgIntroFooter from "../assets/ui/intro-footer.png";
 import imgCtaImageSaveButton from "../assets/ui/cta-image-save-button.png";
 import imgCtaRewardCard from "../assets/ui/cta-reward-card.png";
@@ -2629,7 +2630,7 @@ function ClassicV2Version() {
       <style>{KEYFRAMES}</style>
 
       <main
-        className="relative flex min-h-[100dvh] w-full max-w-[397px] flex-col items-center px-[14px] pb-4"
+        className="relative flex min-h-[100dvh] w-full max-w-[397px] flex-col items-center px-[14px]"
         style={{
           backgroundImage: `url("${imgIntroBg}")`,
           backgroundPosition: "top center",
@@ -2901,6 +2902,13 @@ function ClassicV2Version() {
         {phase === "pack" && (
           <CardPackPanel onOpen={handleOpenPack} />
         )}
+
+        <img
+          src={imgIntroPreregistrationRewards}
+          alt="사전예약 보상 안내"
+          className="-mx-[14px] mt-4 block w-[calc(100%+28px)] max-w-none shrink-0"
+          draggable={false}
+        />
       </main>
 
       <footer className="relative w-full max-w-[397px] shrink-0">
