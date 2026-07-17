@@ -163,6 +163,7 @@ const LAUNCH_TARGET_TIME = new Date("2026-08-01T00:00:00+09:00").getTime();
 const CARD_PACK_FRONT_IMAGE = "/assets/card-pack-front.png";
 const CARD_PACK_BACK_IMAGE = "/assets/card-pack-back.png";
 const SCANNER_LOTTIE = "/assets/scanner.lottie";
+const PACK_OPEN_GLOW_IMAGE = "/assets/glow-rotate.svg";
 const CARD_SELECT_FRONT_DELAYS = [
   0, 500, 1000, 1500, 1998.798, 2500, 2998.798, 3497.596, 3998.798,
   4497.596, 4996.394, 5493.988, 5996.394, 6750, 7500, 8250,
@@ -1658,22 +1659,6 @@ function PackOpeningOverlay({ characterName, assets, isReady, onStartPolling, on
     onStartPolling();
   }, [isReady, onStartPolling, openingScene]);
 
-  // Figma nodes 6570:397–573 and 6570:585–761: 34 sparkle layers.
-  const sparkleFlips = [
-    false, true, true, false, true, true, true, true, true,
-    true, true, false, false, false, false, false, true, true,
-    false, false, true, false, false, false, false, false, false,
-    false, true, true, true, true, true, false,
-  ];
-  const particles = sparkleFlips.map((flipped, index) => {
-    const angle = (index / sparkleFlips.length) * Math.PI * 2;
-    const distance = 72 + (index % 5) * 12;
-    return {
-      x: Math.cos(angle) * distance,
-      y: Math.sin(angle) * distance,
-      flipped,
-    };
-  });
   const cardLaunches = [
     [2902, "0px", "2px", "2px", "0deg"],
     [3830, "-11px", "-7px", "-16px", "-3.4deg"],
@@ -1690,26 +1675,21 @@ function PackOpeningOverlay({ characterName, assets, isReady, onStartPolling, on
       <div className="pointer-events-none absolute inset-0 opacity-50" style={{ background: "radial-gradient(ellipse 70% 50% at 50% 55%, rgba(98,141,56,.45), transparent 70%)" }} />
       {openingScene === "pack" ? (
         <div className="absolute inset-0" aria-label="카드팩 개봉 중">
-          {particles.map((particle, index) => (
-            <span
-              key={index}
-              className="absolute left-1/2 top-[445.73px] z-30 block h-[7px] w-[7px]"
+          <div
+            className="pointer-events-none absolute left-1/2 top-[304px] z-30 ml-[24px] h-[392px] w-[382px] -translate-x-1/2"
+            aria-hidden="true"
+          >
+            <img
+              src={PACK_OPEN_GLOW_IMAGE}
+              alt=""
+              draggable={false}
+              className="block h-full w-full object-contain"
               style={{
-                transform: `translate(${particle.x}px,${particle.y}px)`,
-              } as React.CSSProperties}
-            >
-              <span
-                className="block h-full w-full"
-                style={{
-                  clipPath: index % 2 ? "polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%)" : undefined,
-                  borderRadius: index % 2 ? undefined : "50%",
-                  background: index % 4 === 0 ? "#9fe1ff" : index % 4 === 1 ? "#f6f0c9" : "#fff",
-                  filter: "drop-shadow(0 0 5px currentColor)",
-                  animation: `${particle.flipped ? "figmaSparklePopFlipped" : "figmaSparklePop"} 8s linear 1 both`,
-                }}
-              />
-            </span>
-          ))}
+                filter:
+                  "drop-shadow(0 0 7px rgba(255,255,255,.42)) drop-shadow(0 0 12px rgba(159,225,255,.25))",
+              }}
+            />
+          </div>
 
           <svg
             className="pointer-events-none absolute left-1/2 top-[441px] z-30 h-[18px] w-[286px] -translate-x-1/2 overflow-visible"
@@ -1782,19 +1762,6 @@ function PackOpeningOverlay({ characterName, assets, isReady, onStartPolling, on
                   className="absolute left-0 top-0 block h-[420.1px] w-[312.21px] max-w-none"
                 />
               </div>
-              {Array.from({ length: 11 }, (_, index) => (
-                <span
-                  key={`seam-sparkle-${index}`}
-                  className="pointer-events-none absolute top-[57.96px] z-30 h-[10px] w-[10px] bg-white"
-                  style={{
-                    left: `${8 + index * 8.4}%`,
-                    clipPath: "polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%)",
-                    filter: "drop-shadow(0 0 6px #9fe1ff)",
-                    animation: `packSeamSparkle 900ms ease-out ${600 + index * 65}ms 1 both`,
-                  }}
-                  aria-hidden="true"
-                />
-              ))}
             </div>
           </div>
 
