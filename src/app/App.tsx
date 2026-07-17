@@ -326,6 +326,29 @@ async function copyShareLink(url = window.location.href) {
   }
 }
 
+type ShareLinkResult = "shared" | "copied" | "cancelled" | "failed";
+
+async function shareLink(url = window.location.href): Promise<ShareLinkResult> {
+  const sharePayload = {
+    title: document.title,
+    url,
+  };
+
+  if (isMobileBrowser() && navigator.share) {
+    try {
+      await navigator.share(sharePayload);
+      return "shared";
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return "cancelled";
+      }
+      // If the native share sheet cannot open, preserve the existing copy flow.
+    }
+  }
+
+  return (await copyShareLink(url)) ? "copied" : "failed";
+}
+
 function createCtaShareLink(characterizationId?: string | null) {
   if (!characterizationId) return window.location.href;
 
@@ -462,7 +485,13 @@ function openImageFallback(imageUrl: string) {
 }
 
 function isMobileBrowser() {
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isMobileUserAgent = /Android|iPhone|iPad|iPod/i.test(
+    navigator.userAgent,
+  );
+  const isIPadWithDesktopUserAgent =
+    navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+
+  return isMobileUserAgent || isIPadWithDesktopUserAgent;
 }
 
 async function saveCardImage(imageUrl: string, characterName: string) {
@@ -3596,7 +3625,8 @@ function CTAPage({
 
   const handleShare = async () => {
     trackEvent("cta_share_clicked");
-    if (await copyShareLink(createCtaShareLink(characterizationId))) {
+    const result = await shareLink(createCtaShareLink(characterizationId));
+    if (result === "copied") {
       setShowToast(true);
     }
   };
