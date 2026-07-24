@@ -2240,6 +2240,8 @@ function ClassicV2Version() {
   const searchParams = new URLSearchParams(window.location.search);
   const sharedCtaName = searchParams.get("name") || "";
   const sharedCharacterizationId = getSharedCharacterizationId(searchParams);
+  const shouldPreviewRestrictedModal =
+    searchParams.get("restrictedModal") === "1";
   const isSharedCta =
     searchParams.get("cta") === "1" || !!sharedCharacterizationId;
   const [phase, setPhase] = useState<Phase>("idle");
@@ -2254,6 +2256,8 @@ function ClassicV2Version() {
     useState<ConversionStatus>("idle");
   const [showGenerationErrorModal, setShowGenerationErrorModal] =
     useState(false);
+  const [showRestrictedImageModal, setShowRestrictedImageModal] =
+    useState(shouldPreviewRestrictedModal);
   const [generationErrorReturnsHome, setGenerationErrorReturnsHome] =
     useState(false);
   const [showImageGuide, setShowImageGuide] = useState(false);
@@ -2470,9 +2474,15 @@ function ClassicV2Version() {
         }
 
         if (["FAILURE", "CANCELED", "CANCELLED"].includes(characterization.status)) {
-          throw new Error(
-            characterization.failureReason || "카드 이미지 변환에 실패했어요.",
-          );
+          trackEvent("convert_failed", {
+            status: characterization.status,
+            message: characterization.failureReason || "restricted_image",
+          });
+          setShowRestrictedImageModal(true);
+          setConversionStatus("error");
+          setPhase("idle");
+          pendingCharacterizationRef.current = null;
+          return;
         }
 
         await waitForPollInterval(controller.signal);
@@ -2507,6 +2517,7 @@ function ClassicV2Version() {
     });
     setGenerationError("");
     setShowGenerationErrorModal(false);
+    setShowRestrictedImageModal(false);
     setGenerationErrorReturnsHome(false);
     setConversionStatus("pending");
     setGeneratedAssets(null);
@@ -2626,6 +2637,7 @@ function ClassicV2Version() {
     setRegistrationView(null);
     setGenerationError("");
     setShowGenerationErrorModal(false);
+    setShowRestrictedImageModal(false);
     setGenerationErrorReturnsHome(false);
     window.scrollTo(0, 0);
     document.documentElement.scrollTop = 0;
@@ -3048,6 +3060,86 @@ function ClassicV2Version() {
                 setShowGenerationErrorModal(false);
               }}
               className="mt-[26px] flex h-[46px] w-full items-center justify-center rounded-[6px] bg-[#36501e] text-[14px] tracking-[0.7px] text-white"
+              style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
+      {showRestrictedImageModal && (
+        <div
+          className="fixed inset-0 z-[260] flex items-center justify-center bg-black/70 px-4 py-6"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="restricted-image-title"
+        >
+          <div
+            className="relative w-[334px] max-h-[calc(100dvh-48px)] overflow-y-auto rounded-[5px] bg-[#faf5eb] px-[26px] pb-[26px] pt-[30px]"
+            style={{
+              border: "2px solid #1f1a13",
+              boxShadow:
+                "0 4px 0 #1f1a13, 6px 6px 0 rgba(0,0,0,0.5)",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setShowRestrictedImageModal(false)}
+              className="absolute right-[8px] top-[6px] flex h-8 w-8 items-center justify-center text-[28px] leading-none text-[#b7ad9a]"
+              aria-label="닫기"
+            >
+              <img
+                src="/assets/modal-close.png"
+                alt=""
+                className="h-[24px] w-[24px] object-contain"
+                draggable={false}
+              />
+            </button>
+            <h2
+              id="restricted-image-title"
+              className="text-center text-[19px] leading-[1.4] tracking-[0.3px] text-[#36501e]"
+              style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
+            >
+              사용할 수 없는 이미지에요
+            </h2>
+            <div
+              className="mt-[18px] text-[12px] leading-[1.65] tracking-[0.15px] text-[#6a6a61]"
+              style={{ fontFamily: "Elice DX Neolli", fontWeight: 300 }}
+            >
+              <p>
+                다음 각 호의 이미지는 업로드하거나 캐릭터라이징에 사용할 수
+                없습니다.
+              </p>
+              <ol className="mt-[12px] list-[lower-alpha] space-y-[7px] pl-[20px]">
+                <li className="pl-[3px]">타인의 권리를 침해하는 이미지</li>
+                <li className="pl-[3px]">
+                  타인의 얼굴, 신체, 개인정보가 포함되어 있으나 적법한 동의가
+                  없는 이미지
+                </li>
+                <li className="pl-[3px]">
+                  음란, 혐오, 폭력, 학대, 차별, 불법행위와 관련된 이미지
+                </li>
+                <li className="pl-[3px]">
+                  상표, 로고, 캐릭터, 저작물 등 제3자의 지식재산권을 침해할
+                  가능성이 있는 이미지
+                </li>
+                <li className="pl-[3px]">
+                  서비스의 정상 운영을 방해하거나 보안상 위험을 초래할 수 있는
+                  이미지
+                </li>
+                <li className="pl-[3px]">
+                  회사 또는 외부 AI 제공자의 정책상 처리할 수 없는 이미지
+                </li>
+              </ol>
+              <p className="mt-[14px]">
+                회사는 업로드 이미지가 위 각 호에 해당한다고 판단하는 경우,
+                캐릭터라이징 처리 또는 결과물 제공을 거절할 수 있습니다.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowRestrictedImageModal(false)}
+              className="mt-[22px] flex h-[46px] w-full items-center justify-center rounded-[6px] bg-[#36501e] text-[14px] tracking-[0.7px] text-white"
               style={{ fontFamily: "Elice DX Neolli", fontWeight: 500 }}
             >
               확인
